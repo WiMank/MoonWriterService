@@ -7,20 +7,20 @@ type AlarmAppInterface interface {
 	Stop()
 }
 
-type AlarmApp struct{
+type AlarmApp struct {
 	AppName string
+	Router  RouterInterface
 }
 
 func InitApp(appName string) AlarmAppInterface {
-	return &AlarmApp{appName}
+	initLogger()
+	return &AlarmApp{appName, initRouter()}
 }
 
 func (alarmApp *AlarmApp) Start() {
-	initLogger()
 	AlarmAppLog{fmt.Sprintf("====Start %s====", alarmApp.AppName), nil}.Info()
-	router := initRouter()
-	router.SetRoutes()
-	router.ListenAndServe()
+	alarmApp.Router.SetRoutes()
+	alarmApp.Router.ListenAndServe()
 }
 
 func (alarmApp *AlarmApp) Stop() {
