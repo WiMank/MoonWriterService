@@ -13,7 +13,7 @@ type AlarmAppInterface interface {
 type AlarmApp struct {
 	AppName            string
 	Router             RouterInterface
-	AppDataBaseSetting AppDataBaseInterface
+	AppDataBaseSetting database.AppDataBaseInterface
 }
 
 func InitApp(appName string) AlarmAppInterface {
@@ -21,7 +21,7 @@ func InitApp(appName string) AlarmAppInterface {
 	return &AlarmApp{appName, initRouter(), setUpDbConnection()}
 }
 
-func setUpDbConnection() AppDataBaseInterface {
+func setUpDbConnection() database.AppDataBaseInterface {
 	AlarmAppLog{"<<<Set Up DataBase Connection>>>", nil}.Info()
 	return &database.AppDataBaseSetting{
 		User:     "postgres",
