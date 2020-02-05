@@ -1,8 +1,9 @@
 package app
 
 import (
+	"../database"
 	"fmt"
-	"github.com/WiMank/AlarmService/database"
+	log "github.com/sirupsen/logrus"
 )
 
 type AlarmAppInterface interface {
@@ -22,7 +23,7 @@ func InitApp(appName string) AlarmAppInterface {
 }
 
 func setUpDbConnection() database.AppDataBaseInterface {
-	AlarmAppLog{"<<<Set Up DataBase Connection>>>", nil}.Info()
+	log.Info("<<<Set Up DataBase Connection>>>")
 	return &database.AppDataBaseSetting{
 		User:     "postgres",
 		Password: "korabl",
@@ -33,11 +34,11 @@ func setUpDbConnection() database.AppDataBaseInterface {
 }
 
 func (alarmApp *AlarmApp) Start() {
-	AlarmAppLog{fmt.Sprintf("====Start %s====", alarmApp.AppName), nil}.Info()
+	log.Info(fmt.Sprintf("====Start %s====", alarmApp.AppName))
 	alarmApp.Router.SetRoutes()
 	alarmApp.Router.ListenAndServe()
 }
 
 func (alarmApp *AlarmApp) Stop() {
-	AlarmAppLog{"====Stop App====", nil}.Info()
+	log.Info(fmt.Sprintf("====Stop %s====", alarmApp.AppName))
 }

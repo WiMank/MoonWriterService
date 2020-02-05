@@ -1,6 +1,8 @@
 package controller
 
-import "net/http"
+import (
+	"net/http"
+)
 
 type User struct {
 	UserId    int
@@ -14,10 +16,10 @@ type AuthenticationController struct {
 	BaseController
 }
 
-func (authc *AuthenticationController) Authentication(w http.ResponseWriter, r *http.Request) {
+func (authc AuthenticationController) Authentication(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (authc *AuthenticationController) RegisterNewUser(w http.ResponseWriter, r *http.Request) {
+func (authc AuthenticationController) RegisterNewUser(w http.ResponseWriter, r *http.Request) {
 
 }

@@ -1,7 +1,9 @@
 package app
 
 import (
+	"../controller"
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -22,7 +24,7 @@ const (
 )
 
 func initRouter() RouterInterface {
-	AlarmAppLog{"<<<Init Router>>>", nil}.Info()
+	log.Info("<<<Init Router>>>")
 	return &AlarmAppRouter{mux.NewRouter()}
 }
 
@@ -31,6 +33,6 @@ func (router *AlarmAppRouter) SetRoutes() {
 }
 
 func (router *AlarmAppRouter) ListenAndServe() {
-	AlarmAppLog{"<<<Listen And Serve>>>", nil}.Info()
-	AlarmAppLog{"Listen And Serve FATAL", http.ListenAndServe("localhost:8000", nil)}.Fatal()
+	log.Info("Listen And Serve>>>")
+	log.Fatal("<<<Listen And Serve FATAL>>>", http.ListenAndServe("localhost:8000", nil))
 }

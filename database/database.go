@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	log "github.com/sirupsen/logrus"
 )
 
 type AppDataBaseSetting struct {
@@ -31,14 +32,15 @@ func (appDataBaseSetting *AppDataBaseSetting) SetUpConnection() {
 func (appDataBaseSetting *AppDataBaseSetting) OpenAppDataBase() {
 	db, err := sqlx.Open(appDataBaseSetting.Driver, appDataBaseSetting.connStr)
 	if err != nil {
-		AlarmAppLog{Message: "Cannot open database", Err: err}.Fatal()
+		log.Fatal("Cannot open database", err)
+		return
 	}
 	appDataBaseSetting.db = db
 }
 
 func (appDataBaseSetting *AppDataBaseSetting) CloseAppDataBase() {
-	closeErr := appDataBaseSetting.db.Close()
-	if closeErr != nil {
-		AlarmAppLog{Message: "Cannot close database", Err: closeErr}.Fatal()
+	err := appDataBaseSetting.db.Close()
+	if err != nil {
+		log.Fatal("Cannot close database", err)
 	}
 }

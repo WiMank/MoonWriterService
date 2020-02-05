@@ -21,19 +21,3 @@ func initLogger() {
 	})
 	log.Info("<<<Init Logger>>>")
 }
-
-func (appLog AlarmAppLog) Info() {
-	log.Info(appLog.Message)
-}
-
-func (appLog AlarmAppLog) Warn() {
-	log.Warn(appLog.Message, " error: ", appLog.Err)
-}
-
-func (appLog AlarmAppLog) Error() {
-	log.Error(appLog.Message, " error: ", appLog.Err)
-}
-
-func (appLog AlarmAppLog) Fatal() {
-	log.Fatal(appLog.Message, " error: ", appLog.Err)
-}

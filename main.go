@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/WiMank/AlarmService/app"
+	"./app"
 )
 
 func main() {
