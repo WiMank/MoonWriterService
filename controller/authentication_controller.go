@@ -10,10 +10,14 @@ type User struct {
 	Role      string
 }
 
-func Authentication(w http.ResponseWriter, r *http.Request) {
+type AuthenticationController struct {
+	BaseController
+}
+
+func (authc *AuthenticationController) Authentication(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func RegisterNewUser(w http.ResponseWriter, r *http.Request) {
+func (authc *AuthenticationController) RegisterNewUser(w http.ResponseWriter, r *http.Request) {
 
 }

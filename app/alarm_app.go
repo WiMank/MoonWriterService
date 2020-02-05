@@ -1,6 +1,9 @@
 package app
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/WiMank/AlarmService/database"
+)
 
 type AlarmAppInterface interface {
 	Start()
@@ -8,13 +11,25 @@ type AlarmAppInterface interface {
 }
 
 type AlarmApp struct {
-	AppName string
-	Router  RouterInterface
+	AppName            string
+	Router             RouterInterface
+	AppDataBaseSetting AppDataBaseInterface
 }
 
 func InitApp(appName string) AlarmAppInterface {
 	initLogger()
-	return &AlarmApp{appName, initRouter()}
+	return &AlarmApp{appName, initRouter(), setUpDbConnection()}
+}
+
+func setUpDbConnection() AppDataBaseInterface {
+	AlarmAppLog{"<<<Set Up DataBase Connection>>>", nil}.Info()
+	return &database.AppDataBaseSetting{
+		User:     "postgres",
+		Password: "korabl",
+		Dbname:   "alarm_database",
+		Driver:   "postgres",
+		Sslmode:  false,
+	}
 }
 
 func (alarmApp *AlarmApp) Start() {

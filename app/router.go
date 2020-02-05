@@ -1,7 +1,6 @@
 package app
 
 import (
-	controller "../controller"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -28,7 +27,7 @@ func initRouter() RouterInterface {
 }
 
 func (router *AlarmAppRouter) SetRoutes() {
-	router.muxRouter.HandleFunc("/users/authentication", controller.Authentication)
+	router.muxRouter.HandleFunc("/users/authentication", controller.AuthenticationController{}.Authentication)
 }
 
 func (router *AlarmAppRouter) ListenAndServe() {

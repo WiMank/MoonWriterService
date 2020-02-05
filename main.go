@@ -1,6 +1,8 @@
 package main
 
-import "./app"
+import (
+	"./app"
+)
 
 func main() {
 	r := app.InitApp("Alarm Service")
