@@ -2,18 +2,14 @@ package app
 
 import (
 	"../controller"
+	"../database"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 )
 
-type RouterInterface interface {
-	SetRoutes()
-	ListenAndServe()
-}
-
 type AlarmAppRouter struct {
-	muxRouter *mux.Router
+	MuxRouter *mux.Router
 }
 
 const (
@@ -23,16 +19,21 @@ const (
 	DELETE = "DELETE"
 )
 
-func initRouter() RouterInterface {
+func initRouter() AlarmAppRouter {
 	log.Info("<<<Init Router>>>")
-	return &AlarmAppRouter{mux.NewRouter()}
+	return AlarmAppRouter{mux.NewRouter()}
 }
 
-func (router *AlarmAppRouter) SetRoutes() {
-	router.muxRouter.HandleFunc("/users/authentication", controller.AuthenticationController{}.Authentication)
+func (router *AlarmAppRouter) SetRoutes(dbSet database.AppDataBaseSetting) {
+	http.Handle("/", router.MuxRouter)
+	log.Info("<<<Set Routes>>>")
+	baseController := controller.BaseController{DbSetting: dbSet}
+	authController := controller.AuthenticationController{BaseController: baseController}
+	router.MuxRouter.HandleFunc("/users/authentication", authController.Authentication).Methods(GET)
+	router.MuxRouter.HandleFunc("/users/registration", authController.RegisterNewUser).Methods(POST)
 }
 
 func (router *AlarmAppRouter) ListenAndServe() {
-	log.Info("Listen And Serve>>>")
+	log.Info("<<<Listen And Serve>>>")
 	log.Fatal("<<<Listen And Serve FATAL>>>", http.ListenAndServe("localhost:8000", nil))
 }

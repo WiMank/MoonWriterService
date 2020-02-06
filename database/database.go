@@ -2,8 +2,6 @@ package database
 
 import (
 	"fmt"
-	"github.com/jmoiron/sqlx"
-	log "github.com/sirupsen/logrus"
 )
 
 type AppDataBaseSetting struct {
@@ -11,36 +9,14 @@ type AppDataBaseSetting struct {
 	Password string
 	Dbname   string
 	Driver   string
-	Sslmode  bool
-	connStr  string
-	db       *sqlx.DB
+	Sslmode  string
+	ConnStr  string
 }
 
-type AppDataBaseInterface interface {
-	SetUpConnection()
-	OpenAppDataBase()
-	CloseAppDataBase()
-}
-
-func (appDataBaseSetting *AppDataBaseSetting) SetUpConnection() {
-	appDataBaseSetting.connStr = fmt.Sprintf("%s %s %s %t",
+func (appDataBaseSetting *AppDataBaseSetting) CreateConnString() {
+	appDataBaseSetting.ConnStr = fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s",
 		appDataBaseSetting.User,
 		appDataBaseSetting.Password,
-		appDataBaseSetting.Dbname, appDataBaseSetting.Sslmode)
-}
-
-func (appDataBaseSetting *AppDataBaseSetting) OpenAppDataBase() {
-	db, err := sqlx.Open(appDataBaseSetting.Driver, appDataBaseSetting.connStr)
-	if err != nil {
-		log.Fatal("Cannot open database", err)
-		return
-	}
-	appDataBaseSetting.db = db
-}
-
-func (appDataBaseSetting *AppDataBaseSetting) CloseAppDataBase() {
-	err := appDataBaseSetting.db.Close()
-	if err != nil {
-		log.Fatal("Cannot close database", err)
-	}
+		appDataBaseSetting.Dbname,
+		appDataBaseSetting.Sslmode)
 }

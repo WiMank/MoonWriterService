@@ -6,36 +6,34 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type AlarmAppInterface interface {
-	Start()
-	Stop()
-}
-
 type AlarmApp struct {
 	AppName            string
-	Router             RouterInterface
-	AppDataBaseSetting database.AppDataBaseInterface
+	Router             AlarmAppRouter
+	AppDataBaseSetting database.AppDataBaseSetting
 }
 
-func InitApp(appName string) AlarmAppInterface {
+func InitApp(appName string) AlarmApp {
 	initLogger()
-	return &AlarmApp{appName, initRouter(), setUpDbConnection()}
+
+	return AlarmApp{appName, initRouter(), setUpDbConnection()}
 }
 
-func setUpDbConnection() database.AppDataBaseInterface {
+func setUpDbConnection() database.AppDataBaseSetting {
 	log.Info("<<<Set Up DataBase Connection>>>")
-	return &database.AppDataBaseSetting{
+	connection := database.AppDataBaseSetting{
 		User:     "postgres",
 		Password: "korabl",
 		Dbname:   "alarm_database",
 		Driver:   "postgres",
-		Sslmode:  false,
+		Sslmode:  "disable",
 	}
+	connection.CreateConnString()
+	return connection
 }
 
 func (alarmApp *AlarmApp) Start() {
 	log.Info(fmt.Sprintf("====Start %s====", alarmApp.AppName))
-	alarmApp.Router.SetRoutes()
+	alarmApp.Router.SetRoutes(alarmApp.AppDataBaseSetting)
 	alarmApp.Router.ListenAndServe()
 }
 
