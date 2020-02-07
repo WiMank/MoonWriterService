@@ -43,12 +43,10 @@ func (uar *UserAuthRequest) authenticateUser(w http.ResponseWriter, db *sqlx.DB)
 		w.WriteHeader(http.StatusOK)
 	} else {
 		w.WriteHeader(http.StatusUnauthorized)
-		encodeJson(
-			w,
-			AuthenticationResponse{
-				"User not registered in the system",
-				uar.UserName,
-				http.StatusText(http.StatusUnauthorized)})
+		encodeJson(w, AuthenticationResponse{
+			"User not registered in the system",
+			uar.UserName,
+			http.StatusText(http.StatusUnauthorized)})
 	}
 }
 
@@ -58,19 +56,17 @@ func (urr *UserRegistrationRequest) registerUser(w http.ResponseWriter, db *sqlx
 		w.WriteHeader(http.StatusCreated)
 		newUser := User{UserName: urr.UserName, UserPass: urr.UserPass}
 		newUser.insertUserFromDb(db)
-		encodeJson(w,
-			AuthenticationResponse{
-				"Successful registration",
-				urr.UserName,
-				http.StatusText(http.StatusCreated)})
+		encodeJson(w, AuthenticationResponse{
+			"Successful registration",
+			urr.UserName,
+			http.StatusText(http.StatusCreated)})
 	} else {
 		log.Info("userExist else")
 		w.WriteHeader(http.StatusBadRequest)
-		encodeJson(w,
-			AuthenticationResponse{
-				"A user with this name is already registered",
-				urr.UserName,
-				http.StatusText(http.StatusBadRequest)})
+		encodeJson(w, AuthenticationResponse{
+			"A user with this name is already registered",
+			urr.UserName,
+			http.StatusText(http.StatusBadRequest)})
 	}
 }
 

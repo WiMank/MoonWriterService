@@ -26,8 +26,8 @@ type UserNameAndPass struct {
 }
 
 type UserAuthRequest struct {
-	UserName string `db:"user_name" json:"user_name" validate:"required,min=2,max=25"`
-	UserPass string `db:"user_pass" json:"user_pass" validate:"passwd, required,min=6,max=50"`
+	UserName string `json:"user_name" validate:"required,min=2,max=25"`
+	UserPass string `json:"user_pass" validate:"passwd, required,min=6,max=50"`
 }
 
 func (uar *UserAuthRequest) decodeJson(r *http.Request) {
@@ -45,8 +45,8 @@ func (uar *UserAuthRequest) getPass() string {
 }
 
 type UserRegistrationRequest struct {
-	UserName  string `db:"user_name" json:"user_name" validate:"required,min=2,max=25"`
-	UserPass  string `db:"user_pass" json:"user_pass" validate:"passwd, required,min=6,max=50"`
+	UserName  string `json:"user_name" validate:"required,min=2,max=25"`
+	UserPass  string `json:"user_pass" validate:"passwd, required,min=6,max=50"`
 	MobileKey string `json:"mobile_key" validate:"required,min=6,max=50"`
 }
 
