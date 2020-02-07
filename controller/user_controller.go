@@ -12,7 +12,6 @@ func (controller *AuthenticationController) Authentication(w http.ResponseWriter
 	w.Header().Set(contentTypeHeader, applicationJsonType)
 	db := controller.BaseController.OpenAppDataBase()
 	defer controller.BaseController.CloseAppDataBase(db)
-
 	var request UserAuthRequest
 	request.decodeJson(r)
 	request.authenticateUser(w, db)
@@ -22,26 +21,25 @@ func (controller *AuthenticationController) RegisterNewUser(w http.ResponseWrite
 	w.Header().Set(contentTypeHeader, applicationJsonType)
 	db := controller.BaseController.OpenAppDataBase()
 	defer controller.BaseController.CloseAppDataBase(db)
-
 	var authUser UserRegistrationRequest
 	authUser.decodeJson(r)
 	authUser.registerUser(w, db)
 }
 
-func (controller *AuthenticationController) GetUserProfile(w http.ResponseWriter, r *http.Request) {
+func (controller *AuthenticationController) GetUserProfile(_ http.ResponseWriter, _ *http.Request) {
 
 }
 
-func (controller *AuthenticationController) UpdateUser(w http.ResponseWriter, r *http.Request) {
+func (controller *AuthenticationController) UpdateUser(_ http.ResponseWriter, _ *http.Request) {
 
 }
 
-func (controller *AuthenticationController) DeleteUser(w http.ResponseWriter, r *http.Request) {
+func (controller *AuthenticationController) DeleteUser(_ http.ResponseWriter, _ *http.Request) {
 
 }
 
 func (uar *UserAuthRequest) authenticateUser(w http.ResponseWriter, db *sqlx.DB) {
-	if uar.canAuthenticationUser(db) {
+	if userExist(db, uar) {
 		w.WriteHeader(http.StatusOK)
 	} else {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -54,17 +52,9 @@ func (uar *UserAuthRequest) authenticateUser(w http.ResponseWriter, db *sqlx.DB)
 	}
 }
 
-func (uar *UserAuthRequest) canAuthenticationUser(db *sqlx.DB) bool {
-	dbUser := getUserFromDb(db, uar)
-	if (dbUser.UserName == uar.UserName) && (dbUser.UserPass == uar.UserPass) {
-		return true
-	} else {
-		return false
-	}
-}
-
 func (urr *UserRegistrationRequest) registerUser(w http.ResponseWriter, db *sqlx.DB) {
-	if urr.canRegisterUser(db) {
+	if !userExist(db, urr) {
+		log.Info("userExist if")
 		w.WriteHeader(http.StatusCreated)
 		newUser := User{UserName: urr.UserName, UserPass: urr.UserPass}
 		newUser.insertUserFromDb(db)
@@ -74,6 +64,7 @@ func (urr *UserRegistrationRequest) registerUser(w http.ResponseWriter, db *sqlx
 				urr.UserName,
 				http.StatusText(http.StatusCreated)})
 	} else {
+		log.Info("userExist else")
 		w.WriteHeader(http.StatusBadRequest)
 		encodeJson(w,
 			AuthenticationResponse{
@@ -83,23 +74,24 @@ func (urr *UserRegistrationRequest) registerUser(w http.ResponseWriter, db *sqlx
 	}
 }
 
-func (urr *UserRegistrationRequest) canRegisterUser(db *sqlx.DB) bool {
-	dbUser := getUserFromDb(db, urr)
-	if (dbUser.UserName == urr.UserName) && (dbUser.UserPass == urr.UserPass) {
-		return false
-	} else {
+func userExist(db *sqlx.DB, userInterface UserRequestInterface) bool {
+	dbUser := getUserFromDb(db, userInterface)
+	if (dbUser.UserName == userInterface.getName()) && (dbUser.UserPass == userInterface.getPass()) {
 		return true
+	} else {
+		return false
 	}
 }
 
-func getUserFromDb(db *sqlx.DB, userInterface UserInterface) UserData {
-	var dbUser UserData
-	userName, userPass := userInterface.getNameAndPass()
-	err := db.QueryRowx(`SELECT * FROM "user" WHERE user_name=$1 AND user_pass=$2`, userName, userPass).StructScan(&dbUser)
+func getUserFromDb(db *sqlx.DB, userInterface UserRequestInterface) UserNameAndPass {
+	var dbUserNameAndPass UserNameAndPass
+	err := db.QueryRowx(`SELECT user_name, user_pass FROM "user" WHERE user_name=$1 AND user_pass=$2`,
+		userInterface.getName(),
+		userInterface.getPass()).StructScan(&dbUserNameAndPass)
 	if err != nil {
 		log.Error("getUserFromDb: ", err)
 	}
-	return dbUser
+	return dbUserNameAndPass
 }
 
 func (u *User) insertUserFromDb(db *sqlx.DB) {

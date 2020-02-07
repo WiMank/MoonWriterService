@@ -6,9 +6,10 @@ import (
 	"net/http"
 )
 
-type UserInterface interface {
+type UserRequestInterface interface {
 	decodeJson(r *http.Request)
-	getNameAndPass() (string, string)
+	getName() string
+	getPass() string
 }
 
 type User struct {
@@ -19,14 +20,14 @@ type User struct {
 	Role      string `db:"role" json:"role"`
 }
 
-type UserData struct {
-	UserName string
-	UserPass string
+type UserNameAndPass struct {
+	UserName string `db:"user_name"`
+	UserPass string `db:"user_pass"`
 }
 
 type UserAuthRequest struct {
-	UserName string `json:"user_name" validate:"required,min=2,max=25"`
-	UserPass string `json:"user_pass" validate:"passwd, required,min=6,max=50"`
+	UserName string `db:"user_name" json:"user_name" validate:"required,min=2,max=25"`
+	UserPass string `db:"user_pass" json:"user_pass" validate:"passwd, required,min=6,max=50"`
 }
 
 func (uar *UserAuthRequest) decodeJson(r *http.Request) {
@@ -35,13 +36,17 @@ func (uar *UserAuthRequest) decodeJson(r *http.Request) {
 	}
 }
 
-func (uar *UserAuthRequest) getNameAndPass() (string, string) {
-	return uar.UserName, uar.UserPass
+func (uar *UserAuthRequest) getName() string {
+	return uar.UserName
+}
+
+func (uar *UserAuthRequest) getPass() string {
+	return uar.UserPass
 }
 
 type UserRegistrationRequest struct {
-	UserName  string `json:"user_name" validate:"required,min=2,max=25"`
-	UserPass  string `json:"user_pass" validate:"passwd, required,min=6,max=50"`
+	UserName  string `db:"user_name" json:"user_name" validate:"required,min=2,max=25"`
+	UserPass  string `db:"user_pass" json:"user_pass" validate:"passwd, required,min=6,max=50"`
 	MobileKey string `json:"mobile_key" validate:"required,min=6,max=50"`
 }
 
@@ -51,6 +56,10 @@ func (urr *UserRegistrationRequest) decodeJson(r *http.Request) {
 	}
 }
 
-func (urr *UserRegistrationRequest) getNameAndPass() (string, string) {
-	return urr.UserName, urr.UserPass
+func (urr *UserRegistrationRequest) getName() string {
+	return urr.UserName
+}
+
+func (urr *UserRegistrationRequest) getPass() string {
+	return urr.UserPass
 }
