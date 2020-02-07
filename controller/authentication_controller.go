@@ -2,11 +2,9 @@ package controller
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
 	"net/http"
-	"regexp"
 	"time"
 )
 
@@ -37,7 +35,7 @@ func (controller *AuthenticationController) Authentication(w http.ResponseWriter
 	defer controller.BaseController.CloseAppDataBase(db)
 
 	aUser := decodeUserJson(r)
-	if aUser.checkUser(db) {
+	if aUser.canAuthenticationUser(db) {
 		w.WriteHeader(http.StatusOK)
 		//TODO: Пускаем и даем токен
 		log.Info("Такой юзер есть: ", aUser)
@@ -53,35 +51,34 @@ func (controller *AuthenticationController) RegisterNewUser(w http.ResponseWrite
 	defer controller.BaseController.CloseAppDataBase(db)
 
 	newUser := decodeUserJson(r)
-	checkName(newUser.UserName)
 
-	//TODO: Валидация имени и пароля
-	if newUser.checkUser(db) {
-		w.WriteHeader(http.StatusBadRequest)
-		encodeUserJson(w, AuthenticationResponse{"A user with this name is already registered", newUser.UserName, http.StatusText(http.StatusBadRequest)})
-	} else {
+	if newUser.canRegisterUser(db) {
+		log.Info("canRegisterUser: ", true)
 		w.WriteHeader(http.StatusCreated)
 		insertUser := `INSERT INTO "user" (user_name, user_pass, last_visit, role) VALUES ($1, $2, $3, $4)`
 		db.MustExec(insertUser, newUser.UserName, newUser.UserPass, nowAsUnixMilliseconds(), "user")
 		encodeUserJson(w, AuthenticationResponse{"Successful registration", newUser.UserName, http.StatusText(http.StatusCreated)})
+	} else {
+		log.Info("canRegisterUser: ", false)
+		w.WriteHeader(http.StatusBadRequest)
+		encodeUserJson(w, AuthenticationResponse{"A user with this name is already registered", newUser.UserName, http.StatusText(http.StatusBadRequest)})
 	}
 }
 
-func checkName(name string) {
-	d := func(pattern string, text string) {
-		matched, _ := regexp.Match(pattern, []byte(text))
-		if matched {
-			fmt.Println("√", pattern, ":", text)
-		} else {
-			fmt.Println("X", pattern, ":", text)
-		}
+func (u *User) canRegisterUser(db *sqlx.DB) bool {
+	var dbUser User
+	err := db.QueryRowx(`SELECT * FROM "user" WHERE user_name=$1 AND user_pass=$2`, u.UserName, u.UserPass).StructScan(&dbUser)
+	if err != nil {
+		log.Error("CheckUser", err)
 	}
-
-	pattern := `/^[a-zA-Z0-9]+([_ -]?[a-zA-Z0-9])*$/`
-	d(pattern, name)
+	if (dbUser.UserName == u.UserName) && (dbUser.UserPass == u.UserPass) {
+		return false
+	} else {
+		return true
+	}
 }
 
-func (u *User) checkUser(db *sqlx.DB) bool {
+func (u *User) canAuthenticationUser(db *sqlx.DB) bool {
 	var dbUser User
 	err := db.QueryRowx(`SELECT * FROM "user" WHERE user_name=$1 AND user_pass=$2`, u.UserName, u.UserPass).StructScan(&dbUser)
 	if err != nil {
