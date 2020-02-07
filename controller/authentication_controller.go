@@ -34,14 +34,21 @@ func (controller *AuthenticationController) Authentication(w http.ResponseWriter
 	db := controller.BaseController.OpenAppDataBase()
 	defer controller.BaseController.CloseAppDataBase(db)
 
-	aUser := decodeUserJson(r)
+	var aUser User
+	aUser.decodeUserJson(r)
+
 	if aUser.canAuthenticationUser(db) {
 		w.WriteHeader(http.StatusOK)
 		//TODO: Пускаем и даем токен
 		log.Info("Такой юзер есть: ", aUser)
 	} else {
 		w.WriteHeader(http.StatusUnauthorized)
-		encodeUserJson(w, AuthenticationResponse{"User not registered in the system", aUser.UserName, http.StatusText(http.StatusUnauthorized)})
+		encodeUserJson(
+			w,
+			AuthenticationResponse{
+				"User not registered in the system",
+				aUser.UserName,
+				http.StatusText(http.StatusUnauthorized)})
 	}
 }
 
@@ -50,40 +57,29 @@ func (controller *AuthenticationController) RegisterNewUser(w http.ResponseWrite
 	db := controller.BaseController.OpenAppDataBase()
 	defer controller.BaseController.CloseAppDataBase(db)
 
-	newUser := decodeUserJson(r)
+	var newUser User
+	newUser.decodeUserJson(r)
 
 	if newUser.canRegisterUser(db) {
-		log.Info("canRegisterUser: ", true)
 		w.WriteHeader(http.StatusCreated)
-		insertUser := `INSERT INTO "user" (user_name, user_pass, last_visit, role) VALUES ($1, $2, $3, $4)`
-		db.MustExec(insertUser, newUser.UserName, newUser.UserPass, nowAsUnixMilliseconds(), "user")
-		encodeUserJson(w, AuthenticationResponse{"Successful registration", newUser.UserName, http.StatusText(http.StatusCreated)})
+		newUser.insertUserFromDb(db)
+		encodeUserJson(w,
+			AuthenticationResponse{
+				"Successful registration",
+				newUser.UserName,
+				http.StatusText(http.StatusCreated)})
 	} else {
-		log.Info("canRegisterUser: ", false)
 		w.WriteHeader(http.StatusBadRequest)
-		encodeUserJson(w, AuthenticationResponse{"A user with this name is already registered", newUser.UserName, http.StatusText(http.StatusBadRequest)})
-	}
-}
-
-func (u *User) canRegisterUser(db *sqlx.DB) bool {
-	var dbUser User
-	err := db.QueryRowx(`SELECT * FROM "user" WHERE user_name=$1 AND user_pass=$2`, u.UserName, u.UserPass).StructScan(&dbUser)
-	if err != nil {
-		log.Error("CheckUser", err)
-	}
-	if (dbUser.UserName == u.UserName) && (dbUser.UserPass == u.UserPass) {
-		return false
-	} else {
-		return true
+		encodeUserJson(w,
+			AuthenticationResponse{
+				"A user with this name is already registered",
+				newUser.UserName,
+				http.StatusText(http.StatusBadRequest)})
 	}
 }
 
 func (u *User) canAuthenticationUser(db *sqlx.DB) bool {
-	var dbUser User
-	err := db.QueryRowx(`SELECT * FROM "user" WHERE user_name=$1 AND user_pass=$2`, u.UserName, u.UserPass).StructScan(&dbUser)
-	if err != nil {
-		log.Error("CheckUser", err)
-	}
+	dbUser := u.getUserFromDb(db)
 	if (dbUser.UserName == u.UserName) && (dbUser.UserPass == u.UserPass) {
 		return true
 	} else {
@@ -91,18 +87,39 @@ func (u *User) canAuthenticationUser(db *sqlx.DB) bool {
 	}
 }
 
-func encodeUserJson(w http.ResponseWriter, v interface{}) {
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		log.Error("encodePersonJson()", err)
+func (u *User) canRegisterUser(db *sqlx.DB) bool {
+	dbUser := u.getUserFromDb(db)
+	if (dbUser.UserName == u.UserName) && (dbUser.UserPass == u.UserPass) {
+		return false
+	} else {
+		return true
 	}
 }
 
-func decodeUserJson(r *http.Request) User {
-	var lUser User
-	if err := json.NewDecoder(r.Body).Decode(&lUser); err != nil {
-		log.Error("decodePersonJson()", err)
+func (u *User) getUserFromDb(db *sqlx.DB) User {
+	var dbUser User
+	err := db.QueryRowx(`SELECT * FROM "user" WHERE user_name=$1 AND user_pass=$2`, u.UserName, u.UserPass).StructScan(&dbUser)
+	if err != nil {
+		log.Error("getUserFromDb: ", err)
 	}
-	return lUser
+	return dbUser
+}
+
+func (u *User) insertUserFromDb(db *sqlx.DB) {
+	insertUserQuery := `INSERT INTO "user" (user_name, user_pass, last_visit, role) VALUES ($1, $2, $3, $4)`
+	db.MustExec(insertUserQuery, u.UserName, u.UserPass, nowAsUnixMilliseconds(), "user")
+}
+
+func encodeUserJson(w http.ResponseWriter, v interface{}) {
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		log.Error("encodePersonJson: ", err)
+	}
+}
+
+func (u *User) decodeUserJson(r *http.Request) {
+	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+		log.Error("decodePersonJson: ", err)
+	}
 }
 
 func nowAsUnixMilliseconds() int64 {
