@@ -25,12 +25,18 @@ func initRouter() AlarmAppRouter {
 }
 
 func (router *AlarmAppRouter) SetRoutes(dbSet database.AppDataBaseSetting) {
-	http.Handle("/", router.MuxRouter)
 	log.Info("<<<Set Routes>>>")
+	http.Handle("/", router.MuxRouter)
+
 	baseController := controller.BaseController{DbSetting: dbSet}
 	authController := controller.AuthenticationController{BaseController: baseController}
+
+	//Users
 	router.MuxRouter.HandleFunc("/users/authentication", authController.Authentication).Methods(GET)
-	router.MuxRouter.HandleFunc("/users/registration", authController.RegisterNewUser).Methods(POST)
+	router.MuxRouter.HandleFunc("/users", authController.RegisterNewUser).Methods(POST)
+	router.MuxRouter.HandleFunc("/users/{id}", authController.GetUserProfile).Methods(GET)
+	router.MuxRouter.HandleFunc("/users/{id}", authController.UpdateUser).Methods(PUT)
+	router.MuxRouter.HandleFunc("/users/{id}", authController.DeleteUser).Methods(DELETE)
 }
 
 func (router *AlarmAppRouter) ListenAndServe() {
