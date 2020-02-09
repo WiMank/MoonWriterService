@@ -39,19 +39,16 @@ func (ur *UserRequest) authenticateUser(w http.ResponseWriter, db *sqlx.DB) {
 	exist, user := ur.getAndCheckExistUser(db)
 	if exist {
 		w.WriteHeader(http.StatusOK)
-		s := user.createSession(ur.MobileKey)
-		if s.checkSessionsCount(db) < 5 {
-			s.insertSession(db)
-		} else {
-			s.clearSessionsAndInsertLast(db)
-		}
-		encodeJson(w, UserResponse{user.UserName, s.AccessToken, s.RefreshToken})
+		session := user.createSession(ur.MobileKey, db)
+		encodeJson(w, UserResponse{user.UserName, session.AccessToken, session.RefreshToken})
 	} else {
 		w.WriteHeader(http.StatusUnauthorized)
-		encodeJson(w, AuthenticationResponse{
-			"User not registered in the system",
-			ur.UserName,
-			http.StatusText(http.StatusUnauthorized)})
+		encodeJson(w,
+			AuthenticationResponse{
+				"User not registered in the system",
+				ur.UserName,
+				http.StatusText(http.StatusUnauthorized),
+			})
 	}
 }
 
@@ -60,15 +57,19 @@ func (ur *UserRequest) registerUser(w http.ResponseWriter, db *sqlx.DB) {
 	if !exist {
 		w.WriteHeader(http.StatusCreated)
 		//TODO: Записать юзера в БД
-		encodeJson(w, AuthenticationResponse{
-			"Successful registration",
-			ur.UserName,
-			http.StatusText(http.StatusCreated)})
+		encodeJson(w,
+			AuthenticationResponse{
+				"Successful registration",
+				ur.UserName,
+				http.StatusText(http.StatusCreated),
+			})
 	} else {
 		w.WriteHeader(http.StatusBadRequest)
-		encodeJson(w, AuthenticationResponse{
-			"A user with this name is already registered",
-			ur.UserName,
-			http.StatusText(http.StatusBadRequest)})
+		encodeJson(w,
+			AuthenticationResponse{
+				"A user with this name is already registered",
+				ur.UserName,
+				http.StatusText(http.StatusBadRequest),
+			})
 	}
 }

@@ -33,21 +33,25 @@ func (ur *UserRequest) getUserFromDb(db *sqlx.DB) User {
 }
 
 func (ur *UserRequest) insertUserFromDb(db *sqlx.DB, urr *UserRequest) {
-	//insertUserQuery := `INSERT INTO "user" (user_name, user_pass, last_visit, role) VALUES ($1, $2, $3, $4)`
-	//db.MustExec(insertUserQuery, u.UserName, u.UserPass, nowAsUnixMilliseconds(), "user")
-	//log.Info("TOKEN: ", generateToken(urr.MobileKey))
-	//insertSessionQuery := `INSERT INTO sessions (user_name, mobile_key, user_token, valid_to) VALUES ($1, $2, $3, $4)`
-	//db.MustExec(insertSessionQuery, u.UserName, urr.MobileKey, "token", 123123123)
+
 }
 
-func (u *User) createSession(mobileKey string) Sessions {
-	return Sessions{
+func (u *User) createSession(mobileKey string, db *sqlx.DB) Sessions {
+	session := Sessions{
 		UserName:     u.UserName,
 		LastVisit:    nowAsUnixMilliseconds(),
 		AccessToken:  u.generateAccessToken(mobileKey),
 		RefreshToken: u.generateRefreshToken(mobileKey),
 		MobileKey:    mobileKey,
 	}
+
+	if session.checkSessionsCount(db) < 5 {
+		session.insertSession(db)
+	} else {
+		session.clearSessionsAndInsertLast(db)
+	}
+
+	return session
 }
 
 func (s *Sessions) insertSession(db *sqlx.DB) {
