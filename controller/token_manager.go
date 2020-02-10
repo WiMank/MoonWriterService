@@ -3,6 +3,7 @@ package controller
 import (
 	"github.com/dgrijalva/jwt-go"
 	log "github.com/sirupsen/logrus"
+	"time"
 )
 
 func (u *User) generateAccessToken(mobileKey string) string {
@@ -36,4 +37,8 @@ func (u *User) generateRefreshToken(mobileKey string) string {
 		log.Error("generateRefreshToken: ", err)
 	}
 	return tokenString
+}
+
+func nowAsUnixMilliseconds() int64 {
+	return time.Now().Round(time.Millisecond).UnixNano() / 1e6
 }
