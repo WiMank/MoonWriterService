@@ -18,7 +18,7 @@ type Configuration struct {
 }
 
 func ReadConfigFile() Configuration {
-	var appConfig Configuration
+	var config Configuration
 	viper.SetConfigName("db_config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(filepath.Join("$GOPATH", "src", "github.com", "WiMank", "AlarmService", "config"))
@@ -29,9 +29,9 @@ func ReadConfigFile() Configuration {
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
 
-	if err := viper.Unmarshal(&appConfig); err != nil {
+	if err := viper.Unmarshal(&config); err != nil {
 		fmt.Println(err)
 		panic(fmt.Errorf("Error unmarshal config file: %s \n", err))
 	}
-	return appConfig
+	return config
 }
