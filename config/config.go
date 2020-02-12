@@ -7,11 +7,12 @@ import (
 )
 
 type Configuration struct {
-	DataBaseConfig struct {
+	DataBase struct {
 		User     string
 		Password string
 		Dbname   string
 		Driver   string
+		Addr     string
 		Sslmode  bool
 	}
 }
@@ -32,6 +33,5 @@ func ReadConfigFile() Configuration {
 		fmt.Println(err)
 		panic(fmt.Errorf("Error unmarshal config file: %s \n", err))
 	}
-
 	return appConfig
 }

@@ -1,9 +1,14 @@
 package main
 
-import "./config"
+import (
+	"github.com/WiMank/AlarmService/config"
+	log "github.com/sirupsen/logrus"
+)
 
 func main() {
 
-	config.ReadConfigFile()
+	appConfig := config.ReadConfigFile()
+
+	log.Info(appConfig.DataBase)
 
 }
