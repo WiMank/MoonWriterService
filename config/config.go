@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"github.com/spf13/viper"
+	"path/filepath"
 )
 
 type Configuration struct {
@@ -20,6 +21,8 @@ func ReadConfigFile() Configuration {
 
 	viper.SetConfigName("db_config.yaml")
 	viper.AddConfigPath("/config")
+	viper.AddConfigPath(filepath.Join("$GOPATH", "src", "github.com", "WiMank", "AlarmService", "config"))
+	viper.AutomaticEnv()
 
 	err := viper.ReadInConfig()
 	if err != nil {
