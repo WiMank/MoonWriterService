@@ -20,7 +20,6 @@ func ReadConfigFile() Configuration {
 	var appConfig Configuration
 
 	viper.SetConfigName("db_config.yaml")
-	viper.AddConfigPath("/config")
 	viper.AddConfigPath(filepath.Join("$GOPATH", "src", "github.com", "WiMank", "AlarmService", "config"))
 	viper.AutomaticEnv()
 
