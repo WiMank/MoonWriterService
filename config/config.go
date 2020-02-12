@@ -1,11 +1,5 @@
 package config
 
-import (
-	"fmt"
-	"github.com/spf13/viper"
-	"path/filepath"
-)
-
 type Configuration struct {
 	DataBase struct {
 		User     string
@@ -19,7 +13,7 @@ type Configuration struct {
 
 func ReadConfigFile() Configuration {
 	var config Configuration
-	viper.SetConfigName("db_config")
+	/*viper.SetConfigName("db_config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(filepath.Join("$GOPATH", "src", "github.com", "WiMank", "AlarmService", "config"))
 	viper.AutomaticEnv()
@@ -32,6 +26,6 @@ func ReadConfigFile() Configuration {
 	if err := viper.Unmarshal(&config); err != nil {
 		fmt.Println(err)
 		panic(fmt.Errorf("Error unmarshal config file: %s \n", err))
-	}
+	}*/
 	return config
 }
