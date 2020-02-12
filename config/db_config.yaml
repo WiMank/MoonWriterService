@@ -2,6 +2,10 @@ database:
   user: postgres
   password: korabl
   dbname: alarm_database
-  addr: 127.0.0.1:5432
+  host: localhost
+  port: 5432
   driver: postgres
-  sslmode: false
+  sslmode: disable
+log:
+  forcecolors: true
+  fulltimestamp: true

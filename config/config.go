@@ -1,21 +1,34 @@
 package config
 
+import (
+	"fmt"
+	"github.com/spf13/viper"
+	"path/filepath"
+)
+
+//Структура конфигурации
 type Configuration struct {
 	DataBase struct {
 		User     string
 		Password string
 		Dbname   string
 		Driver   string
-		Addr     string
-		Sslmode  bool
+		Host     string
+		Port     int
+		Sslmode  string
+	}
+	Log struct {
+		ForceColors   bool
+		FullTimestamp bool
 	}
 }
 
+//Читаем файл конфигурации
 func ReadConfigFile() Configuration {
 	var config Configuration
-	/*viper.SetConfigName("db_config")
+	viper.SetConfigName("db_config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(filepath.Join("$GOPATH", "src", "github.com", "WiMank", "AlarmService", "config"))
+	viper.AddConfigPath(filepath.Join("config"))
 	viper.AutomaticEnv()
 
 	err := viper.ReadInConfig()
@@ -24,8 +37,8 @@ func ReadConfigFile() Configuration {
 	}
 
 	if err := viper.Unmarshal(&config); err != nil {
-		fmt.Println(err)
 		panic(fmt.Errorf("Error unmarshal config file: %s \n", err))
-	}*/
+	}
+
 	return config
 }

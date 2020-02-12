@@ -1,4 +1,4 @@
-package model
+package domain
 
 type Session struct {
 	SessionId    int    `db:"session_id"`
