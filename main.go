@@ -1,6 +1,6 @@
 package main
 
-import "github.com/WiMank/AlarmService/config"
+import "./config"
 
 func main() {
 

@@ -18,9 +18,9 @@ type Configuration struct {
 
 func ReadConfigFile() Configuration {
 	var appConfig Configuration
-
-	viper.SetConfigName("db_config.yaml")
-	viper.AddConfigPath(filepath.Join("$GOPATH", "src", "github.com", "WiMank", "AlarmService", "db_config.yaml"))
+	viper.SetConfigName("db_config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(filepath.Join("$GOPATH", "src", "github.com", "WiMank", "AlarmService", "config"))
 	viper.AutomaticEnv()
 
 	err := viper.ReadInConfig()
