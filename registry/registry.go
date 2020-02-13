@@ -18,5 +18,5 @@ func NewRegistry(db *sqlx.DB) Registry {
 }
 
 func (r *registry) NewUserController() controller.AppController {
-	return r.UserController()
+	return r.CreateUserController()
 }

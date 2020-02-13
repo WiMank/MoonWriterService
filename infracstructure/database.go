@@ -25,7 +25,7 @@ func NewDataBase(config config.Configuration) *sqlx.DB {
 		panic(fmt.Errorf("Error opening database: %s \n", err))
 	}
 
-	defer CloseDb(db)
+	//defer closeDb(db)
 
 	err = db.Ping()
 	if err != nil {
@@ -35,12 +35,4 @@ func NewDataBase(config config.Configuration) *sqlx.DB {
 	log.Info("Successfully connected to the database!")
 
 	return db
-}
-
-//Закрываем БД
-func CloseDb(db *sqlx.DB) {
-	err := db.Close()
-	if err != nil {
-		log.Errorf("Failed to close the database")
-	}
 }

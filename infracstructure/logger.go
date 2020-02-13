@@ -5,7 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//Настраиваем цвет вывода и временные метки
+//Настраиваем цвет вывода и временные метки логгера
 func NewLogger(configuration config.Configuration) {
 	log.SetFormatter(&log.TextFormatter{
 		ForceColors:   configuration.Log.ForceColors,

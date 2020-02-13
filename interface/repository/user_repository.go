@@ -14,6 +14,7 @@ type userRepository struct {
 
 type UserRepository interface {
 	DecodeUser(r *http.Request) domain.User
+	EncodeUser(w http.ResponseWriter, user domain.UserResponse)
 	InsertUser(user domain.User)
 	DeleteUser(user domain.User)
 }
@@ -30,20 +31,21 @@ func (ur *userRepository) DecodeUser(r *http.Request) domain.User {
 	return requestUser
 }
 
+func (ur *userRepository) EncodeUser(w http.ResponseWriter, user domain.UserResponse) {
+	err := json.NewEncoder(w).Encode(user)
+	if err != nil {
+		log.Errorf("Encode User error", err)
+	}
+}
+
 func (ur *userRepository) InsertUser(user domain.User) {
 	insertUserExec := `INSERT INTO "user" (user_name, user_pass, user_role) VALUES ($1, $2, $3)`
 	ur.db.MustExec(insertUserExec, user.UserName, user.UserPass, user.UserRole)
-	defer ur.CloseDataBase()
 }
 
 func (ur *userRepository) DeleteUser(user domain.User) {
 	deleteUserExec := `DELETE FROM "user" WHERE user_name=$1 AND user_pass=$2 AND user_role=$3`
 	ur.db.MustExec(deleteUserExec, user.UserName, user.UserPass, user.UserRole)
-	defer ur.CloseDataBase()
-}
-
-func (ur *userRepository) OpenDataBase() {
-
 }
 
 func (ur *userRepository) CloseDataBase() {

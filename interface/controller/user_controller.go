@@ -21,9 +21,9 @@ func NewUserController(interactor interactor.UserInteractor) UserController {
 
 func (uc *userController) PostUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(domain.ContentTypeHeader, domain.ApplicationJsonType)
-	result := uc.interactor.Decode(r)
-	insertResponse := uc.interactor.Insert(result)
-	uc.interactor.Encode(w, insertResponse)
+	decodeResult := uc.interactor.Decode(r)
+	userResponse := uc.interactor.Insert(decodeResult)
+	uc.interactor.Encode(w, userResponse)
 }
 
 func (uc *userController) DeleteUser(w http.ResponseWriter, r *http.Request) {
