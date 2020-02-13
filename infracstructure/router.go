@@ -1,1 +1,5 @@
 package infracstructure
+
+func NewRouter() {
+
+}
