@@ -2,12 +2,12 @@ package controller
 
 import (
 	"github.com/WiMank/AlarmService/domain"
-	"github.com/WiMank/AlarmService/usecase/interactor"
+	"github.com/WiMank/AlarmService/usecase"
 	"net/http"
 )
 
 type userController struct {
-	interactor interactor.UserInteractor
+	interactor usecase.UserInteractor
 }
 
 type UserController interface {
@@ -15,7 +15,7 @@ type UserController interface {
 	DeleteUser(w http.ResponseWriter, r *http.Request)
 }
 
-func NewUserController(interactor interactor.UserInteractor) UserController {
+func NewUserController(interactor usecase.UserInteractor) UserController {
 	return &userController{interactor}
 }
 

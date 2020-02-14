@@ -1,4 +1,4 @@
-package controller
+package repository
 
 type BaseRepository interface {
 	CloseDataBase()

@@ -1,4 +1,4 @@
-package interactor
+package usecase
 
 import (
 	"github.com/WiMank/AlarmService/domain"
