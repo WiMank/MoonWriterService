@@ -32,8 +32,8 @@ func (ui *userInteractor) Encode(w http.ResponseWriter, userResponse domain.User
 }
 
 func (ui *userInteractor) Insert(user domain.User) domain.UserResponse {
-	ui.repository.InsertUser(user)
-	return ui.presenter.NewUserResponse(user)
+	isSuccess := ui.repository.InsertUser(user)
+	return ui.presenter.NewUserResponse(user, isSuccess)
 }
 
 func (ui *userInteractor) Delete(user domain.User) domain.UserResponse {

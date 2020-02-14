@@ -17,7 +17,7 @@ type userRepository struct {
 type UserRepository interface {
 	DecodeUser(r *http.Request) domain.User
 	EncodeUser(w http.ResponseWriter, user domain.UserResponse)
-	InsertUser(user domain.User)
+	InsertUser(user domain.User) bool
 	DeleteUser(user domain.User)
 }
 
@@ -40,14 +40,16 @@ func (ur *userRepository) EncodeUser(w http.ResponseWriter, user domain.UserResp
 	}
 }
 
-func (ur *userRepository) InsertUser(user domain.User) {
+func (ur *userRepository) InsertUser(user domain.User) bool {
 	collection := ur.db.Database("alarm_service_database").Collection("users_collection")
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	res, err := collection.InsertOne(ctx, user)
+	result, err := collection.InsertOne(ctx, user)
 	if err != nil {
 		log.Errorf("InsertUser error: \n", err)
+		return false
 	}
-	log.Info("Insert Result: ", res)
+	log.Info("Insert result: ", result)
+	return true
 }
 
 func (ur *userRepository) DeleteUser(user domain.User) {
