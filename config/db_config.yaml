@@ -1,10 +1,10 @@
 database:
-  user: postgres
-  password: korabl
-  dbname: alarm_database
+  user: _
+  password: _
+  dbname: alarm_service_database
   host: localhost
-  port: 5432
-  driver: postgres
+  port: 27017
+  driver: mongo
   sslmode: disable
 log:
   forcecolors: true

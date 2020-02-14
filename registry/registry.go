@@ -2,18 +2,18 @@ package registry
 
 import (
 	"github.com/WiMank/AlarmService/interface/controller"
-	"github.com/jmoiron/sqlx"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type registry struct {
-	db *sqlx.DB
+	db *mongo.Client
 }
 
 type Registry interface {
 	NewUserController() controller.AppController
 }
 
-func NewRegistry(db *sqlx.DB) Registry {
+func NewRegistry(db *mongo.Client) Registry {
 	return &registry{db}
 }
 

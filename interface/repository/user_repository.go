@@ -1,15 +1,17 @@
 package repository
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/WiMank/AlarmService/domain"
-	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
+	"time"
 )
 
 type userRepository struct {
-	db *sqlx.DB
+	db *mongo.Client
 }
 
 type UserRepository interface {
@@ -19,7 +21,7 @@ type UserRepository interface {
 	DeleteUser(user domain.User)
 }
 
-func NewUserRepository(db *sqlx.DB) UserRepository {
+func NewUserRepository(db *mongo.Client) UserRepository {
 	return &userRepository{db}
 }
 
@@ -39,18 +41,28 @@ func (ur *userRepository) EncodeUser(w http.ResponseWriter, user domain.UserResp
 }
 
 func (ur *userRepository) InsertUser(user domain.User) {
-	insertUserExec := `INSERT INTO "user" (user_name, user_pass, user_role) VALUES ($1, $2, $3)`
-	ur.db.MustExec(insertUserExec, user.UserName, user.UserPass, user.UserRole)
+	collection := ur.db.Database("alarm_service_database").Collection("users_collection")
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	res, err := collection.InsertOne(ctx, user)
+	if err != nil {
+		log.Errorf("InsertUser error: \n", err)
+	}
+	log.Info("Insert Result: ", res)
 }
 
 func (ur *userRepository) DeleteUser(user domain.User) {
-	deleteUserExec := `DELETE FROM "user" WHERE user_name=$1 AND user_pass=$2 AND user_role=$3`
-	ur.db.MustExec(deleteUserExec, user.UserName, user.UserPass, user.UserRole)
+	collection := ur.db.Database("alarm_service_database").Collection("users_collection")
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	res, err := collection.DeleteOne(ctx, user)
+	if err != nil {
+		log.Errorf("DeleteUser error: \n", err)
+	}
+	log.Info("Delete Result: ", res)
 }
 
 func (ur *userRepository) CloseDataBase() {
-	err := ur.db.Close()
-	if err != nil {
-		log.Errorf("Failed close database! ", err)
-	}
+	//err := ur.db.Close()
+	//if err != nil {
+	//	log.Errorf("Failed close database! ", err)
+	//}
 }
