@@ -10,6 +10,6 @@ func main() {
 	appConfig := config.ReadConfigFile()
 	infracstructure.NewLogger(appConfig)
 	db := infracstructure.NewDataBase(appConfig)
-	userController := registry.NewRegistry(db).NewUserController()
-	infracstructure.NewRouter(userController)
+	appController := registry.NewRegistry(db).NewAppController()
+	infracstructure.NewRouter(appController)
 }

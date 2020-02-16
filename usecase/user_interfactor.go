@@ -18,8 +18,8 @@ type UserInteractor interface {
 	Insert(user domain.User) domain.UserResponse
 }
 
-func NewUserInteractor(r repository.UserRepository, p presenter.UserPresenter) UserInteractor {
-	return &userInteractor{r, p}
+func NewUserInteractor(repository repository.UserRepository, presenter presenter.UserPresenter) UserInteractor {
+	return &userInteractor{repository, presenter}
 }
 
 func (ui *userInteractor) Decode(r *http.Request) domain.User {

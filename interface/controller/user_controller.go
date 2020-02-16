@@ -26,6 +26,6 @@ func (uc *userController) PostUser(w http.ResponseWriter, r *http.Request) {
 	uc.interactor.Encode(w, userResponse)
 }
 
-func (uc *userController) DeleteUser(w http.ResponseWriter, r *http.Request) {
+func (uc *userController) DeleteUser(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set(domain.ContentTypeHeader, domain.ApplicationJsonType)
 }

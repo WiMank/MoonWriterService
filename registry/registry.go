@@ -10,13 +10,13 @@ type registry struct {
 }
 
 type Registry interface {
-	NewUserController() controller.AppController
+	NewAppController() controller.AppController
 }
 
 func NewRegistry(db *mongo.Client) Registry {
 	return &registry{db}
 }
 
-func (r *registry) NewUserController() controller.AppController {
-	return r.CreateUserController()
+func (r *registry) NewAppController() controller.AppController {
+	return controller.NewAppController(r.CreateUserController(), r.CreateAuthController())
 }
