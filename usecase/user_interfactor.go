@@ -16,7 +16,6 @@ type UserInteractor interface {
 	Decode(r *http.Request) domain.User
 	Encode(w http.ResponseWriter, userResponse domain.UserResponse)
 	Insert(user domain.User) domain.UserResponse
-	//Delete(user domain.User) domain.UserResponse
 }
 
 func NewUserInteractor(r repository.UserRepository, p presenter.UserPresenter) UserInteractor {
@@ -35,8 +34,3 @@ func (ui *userInteractor) Insert(user domain.User) domain.UserResponse {
 	insertResponse := ui.repository.InsertUser(user)
 	return ui.presenter.NewUserResponse(insertResponse)
 }
-
-/*func (ui *userInteractor) Delete(user domain.User) response.AppResponse {
-	ui.repository.DeleteUser(user)
-	return ui.presenter.DeleteUserResponse(user)
-}*/

@@ -21,7 +21,6 @@ type UserRepository interface {
 	DecodeUser(r *http.Request) domain.User
 	EncodeUser(w http.ResponseWriter, response domain.UserResponse)
 	InsertUser(user domain.User) response.AppResponse
-	//DeleteUser(user domain.User) response.AppResponse
 }
 
 func NewUserRepository(collection *mongo.Collection) UserRepository {
@@ -93,13 +92,3 @@ func createUserErrorResponse(err error) *response.UserError {
 	userError.PrintLog(err)
 	return &userError
 }
-
-/*func (ur *userRepository) DeleteUser(user domain.User) response.AppResponse {
-		ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-		res, err := ur.collection.DeleteOne(ctx, user)
-		if err != nil {
-			log.Errorf("DeleteUser response: \n", err)
-		}
-		log.Info("Delete Result: ", res)
-
-}*/
