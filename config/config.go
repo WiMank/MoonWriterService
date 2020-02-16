@@ -33,11 +33,11 @@ func ReadConfigFile() Configuration {
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		panic(fmt.Errorf("Fatal error config file: %s \n", err))
+		panic(fmt.Errorf("Fatal response config file: %s \n", err))
 	}
 
 	if err := viper.Unmarshal(&config); err != nil {
-		panic(fmt.Errorf("Error unmarshal config file: %s \n", err))
+		panic(fmt.Errorf("Response unmarshal config file: %s \n", err))
 	}
 
 	return config

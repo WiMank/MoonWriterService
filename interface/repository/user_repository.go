@@ -3,68 +3,103 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/WiMank/AlarmService/domain"
+	"github.com/WiMank/AlarmService/interface/response"
 	log "github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 	"time"
 )
 
 type userRepository struct {
-	db *mongo.Client
+	collection *mongo.Collection
 }
 
 type UserRepository interface {
 	DecodeUser(r *http.Request) domain.User
-	EncodeUser(w http.ResponseWriter, user domain.UserResponse)
-	InsertUser(user domain.User) bool
-	DeleteUser(user domain.User)
+	EncodeUser(w http.ResponseWriter, response domain.UserResponse)
+	InsertUser(user domain.User) response.AppResponse
+	//DeleteUser(user domain.User) response.AppResponse
 }
 
-func NewUserRepository(db *mongo.Client) UserRepository {
-	return &userRepository{db}
+func NewUserRepository(collection *mongo.Collection) UserRepository {
+	return &userRepository{collection}
 }
 
 func (ur *userRepository) DecodeUser(r *http.Request) domain.User {
 	var requestUser domain.User
 	if err := json.NewDecoder(r.Body).Decode(&requestUser); err != nil {
-		log.Error("Decode User error! ", err)
+		log.Error("Decode User response! ", err)
 	}
 	return requestUser
 }
 
-func (ur *userRepository) EncodeUser(w http.ResponseWriter, user domain.UserResponse) {
-	err := json.NewEncoder(w).Encode(user)
+func (ur *userRepository) EncodeUser(w http.ResponseWriter, response domain.UserResponse) {
+	w.WriteHeader(response.AppResponse.GetStatusCode())
+	err := json.NewEncoder(w).Encode(response)
 	if err != nil {
-		log.Errorf("Encode User error", err)
+		log.Errorf("Encode User response", err)
 	}
 }
 
-func (ur *userRepository) InsertUser(user domain.User) bool {
-	collection := ur.db.Database("alarm_service_database").Collection("users_collection")
+func (ur *userRepository) InsertUser(user domain.User) response.AppResponse {
+	var localUser domain.User
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	result, err := collection.InsertOne(ctx, user)
-	if err != nil {
-		log.Errorf("InsertUser error: \n", err)
-		return false
+	errFind := ur.collection.FindOne(ctx, bson.D{{"user_name", user.UserName}}).Decode(&localUser)
+
+	if errFind != nil {
+		log.Info(fmt.Sprintf("Could not find user: %s", user.UserName))
 	}
-	log.Info("Insert result: ", result)
-	return true
+
+	if localUser.CheckUserExist(user) {
+		return createUserExistErrorResponse(user)
+	}
+
+	_, err := ur.collection.InsertOne(ctx, user)
+	if err != nil {
+		return createUserErrorResponse(err)
+	}
+	return createUserCreatedResponse(user)
 }
 
-func (ur *userRepository) DeleteUser(user domain.User) {
-	collection := ur.db.Database("alarm_service_database").Collection("users_collection")
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	res, err := collection.DeleteOne(ctx, user)
-	if err != nil {
-		log.Errorf("DeleteUser error: \n", err)
+func createUserExistErrorResponse(user domain.User) *response.UserExistError {
+	userExistError := response.UserExistError{
+		Message: fmt.Sprintf("User with the name %s is already registered", user.UserName),
+		Code:    http.StatusBadRequest,
+		Desc:    http.StatusText(http.StatusBadRequest),
 	}
-	log.Info("Delete Result: ", res)
+	userExistError.PrintLog(nil)
+	return &userExistError
 }
 
-func (ur *userRepository) CloseDataBase() {
-	//err := ur.db.Close()
-	//if err != nil {
-	//	log.Errorf("Failed close database! ", err)
-	//}
+func createUserCreatedResponse(user domain.User) *response.UserCreated {
+	userCreated := response.UserCreated{
+		Message: fmt.Sprintf("User %s registration success!", user.UserName),
+		Code:    http.StatusCreated,
+		Desc:    http.StatusText(http.StatusCreated),
+	}
+	userCreated.PrintLog(nil)
+	return &userCreated
 }
+
+func createUserErrorResponse(err error) *response.UserError {
+	userError := response.UserError{
+		Message: "Internal server error during user registration!",
+		Code:    http.StatusInternalServerError,
+		Desc:    http.StatusText(http.StatusInternalServerError),
+	}
+	userError.PrintLog(err)
+	return &userError
+}
+
+/*func (ur *userRepository) DeleteUser(user domain.User) response.AppResponse {
+		ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+		res, err := ur.collection.DeleteOne(ctx, user)
+		if err != nil {
+			log.Errorf("DeleteUser response: \n", err)
+		}
+		log.Info("Delete Result: ", res)
+
+}*/

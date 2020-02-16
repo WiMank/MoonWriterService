@@ -23,12 +23,12 @@ func NewDataBase(config config.Configuration) *mongo.Client {
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connStr))
 	if err != nil {
-		panic(fmt.Errorf("Connect to database error: %s \n", err))
+		panic(fmt.Errorf("Connect to database response: %s \n", err))
 	}
 
 	errPing := client.Ping(ctx, readpref.Primary())
 	if errPing != nil {
-		panic(fmt.Errorf("Ping error: %s \n", err))
+		panic(fmt.Errorf("Ping response: %s \n", err))
 	}
 
 	log.Info("Successfully connected to the database!")

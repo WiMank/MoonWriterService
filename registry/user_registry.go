@@ -16,7 +16,7 @@ func (r *registry) CreateUserInteractor() usecase.UserInteractor {
 }
 
 func (r *registry) CreateUserRepository() repository.UserRepository {
-	return repository.NewUserRepository(r.db)
+	return repository.NewUserRepository(r.db.Database("alarm_service_database").Collection("users_collection"))
 }
 
 func (r *registry) CreateUserPresenter() presenter.UserPresenter {
