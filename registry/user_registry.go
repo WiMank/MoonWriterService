@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"github.com/WiMank/MoonWriterService/domain"
 	"github.com/WiMank/MoonWriterService/interface/controller"
 	"github.com/WiMank/MoonWriterService/interface/presenter"
 	"github.com/WiMank/MoonWriterService/interface/repository"
@@ -16,7 +17,7 @@ func (r *registry) CreateUserInteractor() usecase.UserInteractor {
 }
 
 func (r *registry) CreateUserRepository() repository.UserRepository {
-	return repository.NewUserRepository(r.db.Database("alarm_service_database").Collection("users_collection"))
+	return repository.NewUserRepository(r.db.Database(domain.DataBaseName).Collection("users"))
 }
 
 func (r *registry) CreateUserPresenter() presenter.UserPresenter {

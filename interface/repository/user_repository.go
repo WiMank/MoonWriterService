@@ -49,7 +49,7 @@ func (ur *userRepository) InsertUser(user domain.User) response.AppResponse {
 	errFind := ur.collection.FindOne(ctx, bson.D{{"user_name", user.UserName}}).Decode(&localUser)
 
 	if errFind != nil {
-		log.Info(fmt.Sprintf("Could not find user: %s", user.UserName))
+		log.Info(fmt.Sprintf("Could not find user: [%s]", user.UserName))
 	}
 
 	if localUser.CheckUserExist(user) {
@@ -65,7 +65,7 @@ func (ur *userRepository) InsertUser(user domain.User) response.AppResponse {
 
 func createUserExistErrorResponse(user domain.User) *response.UserExistError {
 	userExistError := response.UserExistError{
-		Message: fmt.Sprintf("User with the name %s is already registered", user.UserName),
+		Message: fmt.Sprintf("User with the name [%s] is already registered", user.UserName),
 		Code:    http.StatusBadRequest,
 		Desc:    http.StatusText(http.StatusBadRequest),
 	}
@@ -75,7 +75,7 @@ func createUserExistErrorResponse(user domain.User) *response.UserExistError {
 
 func createUserCreatedResponse(user domain.User) *response.UserCreated {
 	userCreated := response.UserCreated{
-		Message: fmt.Sprintf("User %s registration success!", user.UserName),
+		Message: fmt.Sprintf("User [%s] registration success!", user.UserName),
 		Code:    http.StatusCreated,
 		Desc:    http.StatusText(http.StatusCreated),
 	}

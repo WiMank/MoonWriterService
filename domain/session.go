@@ -1,9 +1,8 @@
 package domain
 
 type Session struct {
-	SessionId    int    `db:"session_id"`
-	RefreshToken string `db:"refresh_token"`
-	AccessToken  string `db:"access_token"`
-	LastVisit    string `db:"last_visit"`
-	MobileKey    string `db:"mobile_key"`
+	RefreshToken string `bson:"refresh_token"`
+	AccessToken  string `bson:"access_token"`
+	LastVisit    int64  `bson:"last_visit"`
+	MobileKey    string `bson:"mobile_key"`
 }
