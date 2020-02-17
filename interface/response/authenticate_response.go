@@ -3,7 +3,7 @@ package response
 import log "github.com/sirupsen/logrus"
 
 type SessionResponse struct {
-	AppResponse AppResponse `json:"session_response"`
+	AppResponse AppResponse `json:"auth_response"`
 }
 
 type TokenResponse struct {
@@ -16,8 +16,8 @@ type TokenResponse struct {
 	ExpiresInA   int64  `json:"expires_in_a"`
 }
 
-func (tr *TokenResponse) PrintLog(err error) {
-	log.Info(tr.Message, err)
+func (tr *TokenResponse) PrintLog(_ error) {
+	log.Info(tr.Message)
 }
 
 func (tr *TokenResponse) GetStatusCode() int {
@@ -30,8 +30,8 @@ type UnauthorizedResponse struct {
 	Desc    string `json:"desc"`
 }
 
-func (ur *UnauthorizedResponse) PrintLog(err error) {
-	log.Errorf(ur.Message, err)
+func (ur *UnauthorizedResponse) PrintLog(_ error) {
+	log.Errorf(ur.Message)
 }
 
 func (ur *UnauthorizedResponse) GetStatusCode() int {
