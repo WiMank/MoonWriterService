@@ -1,18 +1,27 @@
 package presenter
 
-import "github.com/WiMank/MoonWriterService/interface/response"
+import (
+	"encoding/json"
+	"github.com/WiMank/MoonWriterService/interface/response"
+	log "github.com/sirupsen/logrus"
+	"net/http"
+)
 
 type authPresenter struct {
 }
 
 type AuthPresenter interface {
-	AuthResponse(appResponse response.AppResponse)
+	AuthResponse(w http.ResponseWriter, appResponse response.AppResponse)
 }
 
 func NewAuthPresenter() AuthPresenter {
 	return &authPresenter{}
 }
 
-func (ap *authPresenter) AuthResponse(appResponse response.AppResponse) {
-
+func (ap *authPresenter) AuthResponse(w http.ResponseWriter, appResponse response.AppResponse) {
+	w.WriteHeader(appResponse.GetStatusCode())
+	err := json.NewEncoder(w).Encode(response.SessionResponse{AppResponse: appResponse})
+	if err != nil {
+		log.Errorf("Encode AuthResponse error: \n", err)
+	}
 }

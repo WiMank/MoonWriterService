@@ -1,26 +1,27 @@
 package presenter
 
 import (
-	"github.com/WiMank/MoonWriterService/domain"
+	"encoding/json"
 	"github.com/WiMank/MoonWriterService/interface/response"
+	log "github.com/sirupsen/logrus"
+	"net/http"
 )
 
 type userPresenter struct {
 }
 
 type UserPresenter interface {
-	NewUserResponse(appResponse response.AppResponse) domain.UserResponse
-	DeleteUserResponse(appResponse response.AppResponse) domain.UserResponse
+	NewUserResponse(w http.ResponseWriter, appResponse response.AppResponse)
 }
 
 func NewUserPresenter() UserPresenter {
 	return &userPresenter{}
 }
 
-func (up *userPresenter) NewUserResponse(appResponse response.AppResponse) domain.UserResponse {
-	return domain.UserResponse{AppResponse: appResponse}
-}
-
-func (up *userPresenter) DeleteUserResponse(appResponse response.AppResponse) domain.UserResponse {
-	return domain.UserResponse{AppResponse: appResponse}
+func (up *userPresenter) NewUserResponse(w http.ResponseWriter, appResponse response.AppResponse) {
+	w.WriteHeader(appResponse.GetStatusCode())
+	err := json.NewEncoder(w).Encode(response.UserResponse{AppResponse: appResponse})
+	if err != nil {
+		log.Errorf("Encode User response", err)
+	}
 }

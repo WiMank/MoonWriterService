@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/WiMank/MoonWriterService/domain"
+	"github.com/WiMank/MoonWriterService/interface/request"
+	"github.com/WiMank/MoonWriterService/interface/response"
+	"github.com/dgrijalva/jwt-go"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -18,47 +21,45 @@ type authRepository struct {
 }
 
 type AuthRepository interface {
-	DecodeUser(r *http.Request) domain.User
-	EncodeUser(w http.ResponseWriter, response domain.UserResponse)
-	AuthUser(user domain.User)
+	DecodeRequest(r *http.Request) request.AuthenticateUserRequest
+	AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponse
 }
 
 func NewAuthRepository(collectionUsers *mongo.Collection, collectionSessions *mongo.Collection) AuthRepository {
 	return &authRepository{collectionUsers, collectionSessions}
 }
 
-func (ar *authRepository) DecodeUser(r *http.Request) domain.User {
-	var requestUser domain.User
+func (ar *authRepository) DecodeRequest(r *http.Request) request.AuthenticateUserRequest {
+	var requestUser request.AuthenticateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&requestUser); err != nil {
 		log.Error("Decode User response! ", err)
 	}
 	return requestUser
 }
 
-func (ar *authRepository) EncodeUser(w http.ResponseWriter, response domain.UserResponse) {
-	w.WriteHeader(response.AppResponse.GetStatusCode())
-	err := json.NewEncoder(w).Encode(response)
-	if err != nil {
-		log.Errorf("Encode User response", err)
-	}
-}
-
-func (ar *authRepository) AuthUser(user domain.User) {
-	var localUser domain.User
-	userBson := bson.M{"user_name": user.UserName}
-
+func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponse {
+	var localUserEntity domain.UserEntity
+	userBson := bson.M{"user_name": authReq.User.UserName}
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	if errFind := ar.collectionUsers.FindOne(ctx, userBson).Decode(&localUser); errFind != nil {
-		log.Errorf(fmt.Sprintf("AuthUser could not find user: [%s]", user.UserName))
+
+	if errFind := ar.collectionUsers.FindOne(ctx, userBson).Decode(&localUserEntity); errFind != nil {
+		log.Errorf(fmt.Sprintf("AuthenticateUser could not find user: [%s]", authReq.User.UserName))
 		//TODO: User not found
 	}
 
-	if localUser.CheckUserCredentialsValid(user) {
+	if localUserEntity.CheckUserCredentialsValid(authReq.User) {
 		ar.checkSessionsCount(ctx, userBson)
-		//TODO: Create token
+
 	}
 
-	//TODO: Unauthorized
+	unauthorized := response.UnauthorizedResponse{
+		Message: "Unauthorized",
+		Code:    http.StatusUnauthorized,
+		Desc:    http.StatusText(http.StatusUnauthorized),
+	}
+	unauthorized.PrintLog(nil)
+
+	return &unauthorized
 }
 
 func (ar *authRepository) checkSessionsCount(ctx context.Context, userBson bson.M) {
@@ -83,4 +84,41 @@ func (ar *authRepository) clearSessions(ctx context.Context, userBson bson.M) {
 	if result != nil {
 		log.Info("Delete result: ", result.DeletedCount)
 	}
+}
+
+func createAccessToken(aur request.AuthenticateUserRequest) (string, int64) {
+	tokenTime := GetCurrentTime()
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user":    aur.User.UserName,
+		"role":    aur.User.UserRole,
+		"expired": tokenTime + 18e5,
+	})
+
+	tokenString, err := token.SignedString([]byte(domain.SecretKey))
+
+	if err != nil {
+
+	}
+
+	return tokenString, tokenTime
+}
+
+func createRefreshToken(aur request.AuthenticateUserRequest) (string, int64) {
+	tokenTime := GetCurrentTime()
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"time":    tokenTime,
+		"user":    aur.User.UserName,
+		"expired": tokenTime + 2592e6,
+	})
+
+	tokenString, err := token.SignedString([]byte(domain.SecretKey))
+	if err != nil {
+
+	}
+
+	return tokenString, tokenTime
+}
+
+func GetCurrentTime() int64 {
+	return time.Now().UnixNano() / 1e6
 }

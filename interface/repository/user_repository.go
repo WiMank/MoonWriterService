@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/WiMank/MoonWriterService/domain"
+	"github.com/WiMank/MoonWriterService/interface/request"
 	"github.com/WiMank/MoonWriterService/interface/response"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
@@ -18,53 +19,43 @@ type userRepository struct {
 }
 
 type UserRepository interface {
-	DecodeUser(r *http.Request) domain.User
-	EncodeUser(w http.ResponseWriter, response domain.UserResponse)
-	InsertUser(user domain.User) response.AppResponse
+	DecodeRequest(r *http.Request) request.UserRegistrationRequest
+	InsertUser(request request.UserRegistrationRequest) response.AppResponse
 }
 
 func NewUserRepository(collection *mongo.Collection) UserRepository {
 	return &userRepository{collection}
 }
 
-func (ur *userRepository) DecodeUser(r *http.Request) domain.User {
-	var requestUser domain.User
+func (ur *userRepository) DecodeRequest(r *http.Request) request.UserRegistrationRequest {
+	var requestUser request.UserRegistrationRequest
 	if err := json.NewDecoder(r.Body).Decode(&requestUser); err != nil {
-		log.Error("Decode User response! ", err)
+		log.Error("Decode User response error! ", err)
 	}
 	return requestUser
 }
 
-func (ur *userRepository) EncodeUser(w http.ResponseWriter, response domain.UserResponse) {
-	w.WriteHeader(response.AppResponse.GetStatusCode())
-	err := json.NewEncoder(w).Encode(response)
-	if err != nil {
-		log.Errorf("Encode User response", err)
-	}
-}
-
-func (ur *userRepository) InsertUser(user domain.User) response.AppResponse {
-	var localUser domain.User
+func (ur *userRepository) InsertUser(request request.UserRegistrationRequest) response.AppResponse {
+	var localUserEntity domain.UserEntity
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	errFind := ur.collection.FindOne(ctx, bson.D{{"user_name", user.UserName}}).Decode(&localUser)
 
+	errFind := ur.collection.FindOne(ctx, bson.D{{"user_name", request.User.UserName}}).Decode(&localUserEntity)
 	if errFind != nil {
-		log.Info(fmt.Sprintf("Could not find user: [%s]", user.UserName))
+		log.Info(fmt.Sprintf("Could not find user: [%s]", request.User.UserName))
 	}
 
-	if localUser.CheckUserExist(user) {
-		return createUserExistErrorResponse(user)
+	if localUserEntity.CheckUserExist(request.User) {
+		return createUserExistErrorResponse(request.User)
 	}
 
-	_, err := ur.collection.InsertOne(ctx, user)
-	if err != nil {
+	if _, err := ur.collection.InsertOne(ctx, request.User); err != nil {
 		return createUserErrorResponse(err)
 	}
-	return createUserCreatedResponse(user)
+	return createUserCreatedResponse(request.User)
 }
 
-func createUserExistErrorResponse(user domain.User) *response.UserExistError {
-	userExistError := response.UserExistError{
+func createUserExistErrorResponse(user domain.UserEntity) *response.UserExistResponse {
+	userExistError := response.UserExistResponse{
 		Message: fmt.Sprintf("User with the name [%s] is already registered", user.UserName),
 		Code:    http.StatusBadRequest,
 		Desc:    http.StatusText(http.StatusBadRequest),
@@ -73,8 +64,8 @@ func createUserExistErrorResponse(user domain.User) *response.UserExistError {
 	return &userExistError
 }
 
-func createUserCreatedResponse(user domain.User) *response.UserCreated {
-	userCreated := response.UserCreated{
+func createUserCreatedResponse(user domain.UserEntity) *response.UserCreatedResponse {
+	userCreated := response.UserCreatedResponse{
 		Message: fmt.Sprintf("User [%s] registration success!", user.UserName),
 		Code:    http.StatusCreated,
 		Desc:    http.StatusText(http.StatusCreated),
@@ -83,8 +74,8 @@ func createUserCreatedResponse(user domain.User) *response.UserCreated {
 	return &userCreated
 }
 
-func createUserErrorResponse(err error) *response.UserError {
-	userError := response.UserError{
+func createUserErrorResponse(err error) *response.UserInsertErrorResponse {
+	userError := response.UserInsertErrorResponse{
 		Message: "Internal server error during user registration!",
 		Code:    http.StatusInternalServerError,
 		Desc:    http.StatusText(http.StatusInternalServerError),

@@ -11,15 +11,14 @@ type authController struct {
 }
 
 type AuthController interface {
-	AuthUser(w http.ResponseWriter, r *http.Request)
+	AuthenticationUser(w http.ResponseWriter, r *http.Request)
 }
 
 func NewAuthController(interactor usecase.AuthInteractor) AuthController {
 	return &authController{interactor}
 }
 
-func (ac *authController) AuthUser(w http.ResponseWriter, r *http.Request) {
+func (ac *authController) AuthenticationUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(domain.ContentTypeHeader, domain.ApplicationJsonType)
-	decodeUser := ac.interactor.Decode(r)
-	ac.interactor.Auth(decodeUser)
+	ac.interactor.Authenticate(w, r)
 }

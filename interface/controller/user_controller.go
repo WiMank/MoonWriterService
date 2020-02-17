@@ -12,7 +12,6 @@ type userController struct {
 
 type UserController interface {
 	PostUser(w http.ResponseWriter, r *http.Request)
-	DeleteUser(w http.ResponseWriter, r *http.Request)
 }
 
 func NewUserController(interactor usecase.UserInteractor) UserController {
@@ -21,11 +20,5 @@ func NewUserController(interactor usecase.UserInteractor) UserController {
 
 func (uc *userController) PostUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(domain.ContentTypeHeader, domain.ApplicationJsonType)
-	decodeUser := uc.interactor.Decode(r)
-	userResponse := uc.interactor.Insert(decodeUser)
-	uc.interactor.Encode(w, userResponse)
-}
-
-func (uc *userController) DeleteUser(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set(domain.ContentTypeHeader, domain.ApplicationJsonType)
+	uc.interactor.Insert(w, r)
 }

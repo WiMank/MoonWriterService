@@ -1,6 +1,7 @@
 module github.com/WiMank/MoonWriterService
 
 require (
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gorilla/mux v1.7.4
 	github.com/jackc/pgtype v1.2.0
 	github.com/jmoiron/sqlx v1.2.0
