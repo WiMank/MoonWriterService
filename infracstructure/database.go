@@ -3,7 +3,7 @@ package infracstructure
 import (
 	"context"
 	"fmt"
-	"github.com/WiMank/AlarmService/config"
+	"github.com/WiMank/MoonWriterService/config"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"

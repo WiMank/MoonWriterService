@@ -1,9 +1,9 @@
 package usecase
 
 import (
-	"github.com/WiMank/AlarmService/domain"
-	"github.com/WiMank/AlarmService/interface/presenter"
-	"github.com/WiMank/AlarmService/interface/repository"
+	"github.com/WiMank/MoonWriterService/domain"
+	"github.com/WiMank/MoonWriterService/interface/presenter"
+	"github.com/WiMank/MoonWriterService/interface/repository"
 )
 
 type authInteractor struct {

@@ -1,6 +1,6 @@
 package presenter
 
-import "github.com/WiMank/AlarmService/interface/response"
+import "github.com/WiMank/MoonWriterService/interface/response"
 
 type authPresenter struct {
 }

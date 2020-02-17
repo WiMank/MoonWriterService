@@ -1,10 +1,10 @@
 package registry
 
 import (
-	"github.com/WiMank/AlarmService/interface/controller"
-	"github.com/WiMank/AlarmService/interface/presenter"
-	"github.com/WiMank/AlarmService/interface/repository"
-	"github.com/WiMank/AlarmService/usecase"
+	"github.com/WiMank/MoonWriterService/interface/controller"
+	"github.com/WiMank/MoonWriterService/interface/presenter"
+	"github.com/WiMank/MoonWriterService/interface/repository"
+	"github.com/WiMank/MoonWriterService/usecase"
 )
 
 func (r *registry) CreateUserController() controller.UserController {

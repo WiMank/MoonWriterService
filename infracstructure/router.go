@@ -1,7 +1,7 @@
 package infracstructure
 
 import (
-	"github.com/WiMank/AlarmService/interface/controller"
+	"github.com/WiMank/MoonWriterService/interface/controller"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"

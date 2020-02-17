@@ -1,7 +1,7 @@
 package registry
 
 import (
-	"github.com/WiMank/AlarmService/interface/controller"
+	"github.com/WiMank/MoonWriterService/interface/controller"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 

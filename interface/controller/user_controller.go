@@ -1,8 +1,8 @@
 package controller
 
 import (
-	"github.com/WiMank/AlarmService/domain"
-	"github.com/WiMank/AlarmService/usecase"
+	"github.com/WiMank/MoonWriterService/domain"
+	"github.com/WiMank/MoonWriterService/usecase"
 	"net/http"
 )
 

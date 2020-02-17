@@ -1,7 +1,7 @@
 package infracstructure
 
 import (
-	"github.com/WiMank/AlarmService/config"
+	"github.com/WiMank/MoonWriterService/config"
 	log "github.com/sirupsen/logrus"
 )
 

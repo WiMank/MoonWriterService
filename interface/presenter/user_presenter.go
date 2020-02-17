@@ -1,8 +1,8 @@
 package presenter
 
 import (
-	"github.com/WiMank/AlarmService/domain"
-	"github.com/WiMank/AlarmService/interface/response"
+	"github.com/WiMank/MoonWriterService/domain"
+	"github.com/WiMank/MoonWriterService/interface/response"
 )
 
 type userPresenter struct {

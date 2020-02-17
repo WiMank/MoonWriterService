@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/WiMank/AlarmService/config"
-	"github.com/WiMank/AlarmService/infracstructure"
-	"github.com/WiMank/AlarmService/registry"
+	"github.com/WiMank/MoonWriterService/config"
+	"github.com/WiMank/MoonWriterService/infracstructure"
+	"github.com/WiMank/MoonWriterService/registry"
 )
 
 func main() {

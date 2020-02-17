@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"github.com/WiMank/AlarmService/domain"
+	"github.com/WiMank/MoonWriterService/domain"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 )

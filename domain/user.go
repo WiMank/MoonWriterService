@@ -1,7 +1,7 @@
 package domain
 
 import (
-	"github.com/WiMank/AlarmService/interface/response"
+	"github.com/WiMank/MoonWriterService/interface/response"
 )
 
 type User struct {
