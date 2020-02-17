@@ -48,18 +48,17 @@ func (ar *authRepository) AuthUser(user domain.User) {
 	userBson := bson.M{"user_name": user.UserName}
 
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	errFind := ar.collectionUsers.FindOne(ctx, userBson).Decode(&localUser)
-
-	if errFind != nil {
+	if errFind := ar.collectionUsers.FindOne(ctx, userBson).Decode(&localUser); errFind != nil {
 		log.Errorf(fmt.Sprintf("AuthUser could not find user: [%s]", user.UserName))
+		//TODO: User not found
 	}
 
 	if localUser.CheckUserCredentialsValid(user) {
 		ar.checkSessionsCount(ctx, userBson)
-	} else {
-		//TODO: Unauthorized
+		//TODO: Create token
 	}
 
+	//TODO: Unauthorized
 }
 
 func (ar *authRepository) checkSessionsCount(ctx context.Context, userBson bson.M) {
@@ -71,7 +70,6 @@ func (ar *authRepository) checkSessionsCount(ctx context.Context, userBson bson.
 
 	if errCount != nil {
 		log.Errorf("CountDocuments error: \n", errCount)
-
 	}
 }
 
