@@ -1,6 +1,7 @@
 package domain
 
 type UserEntity struct {
+	Id       string `bson:"_id" json:"_"`
 	UserName string `bson:"user_name" json:"user_name"`
 	UserPass string `bson:"user_pass" json:"user_pass"`
 	UserRole string `bson:"user_role" json:"-"`

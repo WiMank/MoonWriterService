@@ -39,27 +39,27 @@ func (ar *authRepository) DecodeRequest(r *http.Request) request.AuthenticateUse
 }
 
 func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponse {
-	var errAuthenticate error
-	localUserEntity, errAuthenticate := ar.findUserEntity(authReq)
-	session, errAuthenticate := ar.findSession(authReq.MobileKey)
-
-	if errAuthenticate != nil {
+	localUserEntity, errFindUser := ar.findUserEntity(authReq)
+	if errFindUser != nil {
 		return ar.responseCreator.CreateResponse(response.UserFindResponse{}, authReq.User.UserName)
 	}
 
+	session := ar.findSession(authReq.MobileKey)
+
 	if localUserEntity.CheckUserNameAndPass(authReq.User) {
 		ar.checkSessionsCount(authReq)
-		access, errAuthenticate := createAccessToken(authReq, localUserEntity)
-		refresh, errAuthenticate := createRefreshToken(authReq)
+
+		access, errAuthenticate := createAccessToken(localUserEntity)
+		refresh, errAuthenticate := createRefreshToken(localUserEntity)
 
 		if errAuthenticate != nil {
 			return ar.responseCreator.CreateResponse(response.TokenErrorResponse{}, authReq.User.UserName)
 		}
 
-		if session.CheckMkExist(authReq.MobileKey) {
-			ar.updateSession(access, refresh, authReq)
+		if (session != nil) && (session.CheckMkExist(authReq.MobileKey)) {
+			ar.updateSession(access, refresh, localUserEntity, authReq)
 		} else {
-			ar.insertSession(access, refresh, authReq)
+			ar.insertSession(access, refresh, authReq, localUserEntity)
 		}
 
 		return ar.responseCreator.CreateResponse(
@@ -85,15 +85,15 @@ func (ar *authRepository) findUserEntity(authReq request.AuthenticateUserRequest
 	return &localUserEntity, nil
 }
 
-func (ar *authRepository) findSession(mk string) (*domain.SessionEntity, error) {
+func (ar *authRepository) findSession(mk string) *domain.SessionEntity {
 	var session domain.SessionEntity
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	errMk := ar.collectionSessions.FindOne(ctx, bson.M{"mobile_key": mk}).Decode(&session)
 	if errMk != nil {
-		log.Error("Mobile Key decode error:\n", errMk)
-		return nil, errMk
+		log.Error("FindSession error: ", errMk)
+		return nil
 	}
-	return &session, nil
+	return &session
 }
 
 func (ar *authRepository) checkSessionsCount(authReq request.AuthenticateUserRequest) {
@@ -118,10 +118,10 @@ func (ar *authRepository) clearSessions(ctx context.Context, userBson bson.M) {
 	}
 }
 
-func createAccessToken(aur request.AuthenticateUserRequest, entity *domain.UserEntity) (*domain.Token, error) {
+func createAccessToken(entity *domain.UserEntity) (*domain.Token, error) {
 	tokenTime := getCurrentTime() + 36e2
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user":    aur.User.UserName,
+		"user":    entity.Id,
 		"role":    entity.UserRole,
 		"expired": tokenTime,
 	})
@@ -136,11 +136,11 @@ func createAccessToken(aur request.AuthenticateUserRequest, entity *domain.UserE
 	}, nil
 }
 
-func createRefreshToken(aur request.AuthenticateUserRequest) (*domain.Token, error) {
+func createRefreshToken(entity *domain.UserEntity) (*domain.Token, error) {
 	tokenTime := getCurrentTime() + 2592e3
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"time":    tokenTime,
-		"user":    aur.User.UserName,
+		"user":    entity.Id,
 		"expired": tokenTime,
 	})
 	tokenString, err := token.SignedString([]byte(config.SecretKey))
@@ -154,18 +154,18 @@ func createRefreshToken(aur request.AuthenticateUserRequest) (*domain.Token, err
 	}, nil
 }
 
-func (ar *authRepository) insertSession(access *domain.Token, refresh *domain.Token, authReq request.AuthenticateUserRequest) {
+func (ar *authRepository) insertSession(access *domain.Token, refresh *domain.Token, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	_, err := ar.collectionSessions.InsertOne(ctx, createSession(access, refresh, authReq))
+	_, err := ar.collectionSessions.InsertOne(ctx, createSession(access, refresh, authReq, entity))
 	if err != nil {
 		log.Errorf("InsertSession error:\n", err)
 	}
 }
 
-func (ar *authRepository) updateSession(access *domain.Token, refresh *domain.Token, authReq request.AuthenticateUserRequest) {
+func (ar *authRepository) updateSession(access *domain.Token, refresh *domain.Token, entity *domain.UserEntity, authReq request.AuthenticateUserRequest) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	_, errUpdate := ar.collectionSessions.UpdateOne(ctx,
-		bson.D{{"user_name", authReq.User.UserName}, {"mobile_key", authReq.MobileKey}},
+		bson.D{{"user_name", entity.UserName}, {"mobile_key", authReq.MobileKey}},
 		bson.D{{"$set", bson.D{
 			{"refresh_token", refresh.Tok},
 			{"expires_in_r", refresh.Expired},
@@ -179,8 +179,9 @@ func (ar *authRepository) updateSession(access *domain.Token, refresh *domain.To
 	}
 }
 
-func createSession(access *domain.Token, refresh *domain.Token, authReq request.AuthenticateUserRequest) domain.SessionEntity {
+func createSession(access *domain.Token, refresh *domain.Token, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) domain.SessionEntity {
 	return domain.SessionEntity{
+		UserId:       entity.Id,
 		UserName:     authReq.User.UserName,
 		RefreshToken: refresh.Tok,
 		ExpiresInR:   refresh.Expired,

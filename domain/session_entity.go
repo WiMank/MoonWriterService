@@ -1,6 +1,7 @@
 package domain
 
 type SessionEntity struct {
+	UserId       string `bson:"user_id"`
 	UserName     string `bson:"user_name"`
 	RefreshToken string `bson:"refresh_token"`
 	ExpiresInR   int64  `bson:"expires_in_r"`
