@@ -1,7 +1,6 @@
 package registry
 
 import (
-	"github.com/WiMank/MoonWriterService/domain"
 	"github.com/WiMank/MoonWriterService/interface/controller"
 	"github.com/WiMank/MoonWriterService/interface/presenter"
 	"github.com/WiMank/MoonWriterService/interface/repository"
@@ -19,8 +18,8 @@ func (r *registry) CreateAuthInteractor() usecase.AuthInteractor {
 
 func (r *registry) CreateAuthRepository() repository.AuthRepository {
 	return repository.NewAuthRepository(
-		r.db.Database(domain.DataBaseName).Collection("users"),
-		r.db.Database(domain.DataBaseName).Collection("sessions"),
+		r.db.Collection("users"),
+		r.db.Collection("sessions"),
 		r.CreateAppResponseCreator(),
 	)
 }

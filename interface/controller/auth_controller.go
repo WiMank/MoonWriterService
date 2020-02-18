@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/WiMank/MoonWriterService/domain"
+	"github.com/WiMank/MoonWriterService/config"
 	"github.com/WiMank/MoonWriterService/usecase"
 	"net/http"
 )
@@ -19,6 +19,6 @@ func NewAuthController(interactor usecase.AuthInteractor) AuthController {
 }
 
 func (ac *authController) AuthenticationUser(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set(domain.ContentTypeHeader, domain.ApplicationJsonType)
+	w.Header().Set(config.ContentTypeHeader, config.ApplicationJsonType)
 	ac.interactor.Authenticate(w, r)
 }

@@ -13,7 +13,7 @@ import (
 )
 
 //Настраиваем подключение к БД
-func NewDataBase(config config.Configuration) *mongo.Client {
+func NewDataBase(config config.Configuration) *mongo.Database {
 	connStr := fmt.Sprintf(
 		"mongodb://%s:%d",
 		config.DataBase.Host,
@@ -33,5 +33,5 @@ func NewDataBase(config config.Configuration) *mongo.Client {
 
 	log.Info("Successfully connected to the database!")
 
-	return client
+	return client.Database(config.DataBase.Dbname)
 }

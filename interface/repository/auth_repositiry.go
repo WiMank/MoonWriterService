@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"github.com/WiMank/MoonWriterService/config"
 	"github.com/WiMank/MoonWriterService/domain"
 	"github.com/WiMank/MoonWriterService/interface/request"
 	"github.com/WiMank/MoonWriterService/interface/response"
@@ -50,6 +51,7 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 		ar.checkSessionsCount(authReq)
 		access, errAuthenticate := createAccessToken(authReq)
 		refresh, errAuthenticate := createRefreshToken(authReq)
+
 		if errAuthenticate != nil {
 			return ar.responseCreator.CreateResponse(response.TokenErrorResponse{}, authReq.User.UserName)
 		}
@@ -123,7 +125,7 @@ func createAccessToken(aur request.AuthenticateUserRequest) (*domain.Token, erro
 		"role":    aur.User.UserRole,
 		"expired": tokenTime,
 	})
-	tokenString, err := token.SignedString([]byte(domain.SecretKey))
+	tokenString, err := token.SignedString([]byte(config.SecretKey))
 	if err != nil {
 		log.Errorf("Access token signed error:\n", err)
 		return nil, err
@@ -141,7 +143,7 @@ func createRefreshToken(aur request.AuthenticateUserRequest) (*domain.Token, err
 		"user":    aur.User.UserName,
 		"expired": tokenTime,
 	})
-	tokenString, err := token.SignedString([]byte(domain.SecretKey))
+	tokenString, err := token.SignedString([]byte(config.SecretKey))
 	if err != nil {
 		log.Errorf("Refresh token signed error:\n", err)
 		return nil, err

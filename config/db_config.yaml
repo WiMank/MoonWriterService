@@ -1,7 +1,7 @@
 database:
   user: _
   password: _
-  dbname: alarm_service_database
+  dbname: moon_writer_database
   host: localhost
   port: 27017
   driver: mongo
