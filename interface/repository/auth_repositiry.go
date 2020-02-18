@@ -165,14 +165,19 @@ func (ar *authRepository) insertSession(access *domain.Token, refresh *domain.To
 func (ar *authRepository) updateSession(access *domain.Token, refresh *domain.Token, entity *domain.UserEntity, authReq request.AuthenticateUserRequest) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	_, errUpdate := ar.collectionSessions.UpdateOne(ctx,
-		bson.D{{"user_name", entity.UserName}, {"mobile_key", authReq.MobileKey}},
-		bson.D{{"$set", bson.D{
-			{"refresh_token", refresh.Tok},
-			{"expires_in_r", refresh.Expired},
-			{"access_token", access.Tok},
-			{"expires_in_a", access.Expired},
-			{"last_visit", getCurrentTime()},
-		}}})
+		bson.D{
+			{"user_name", entity.UserName},
+			{"user_id", entity.Id},
+			{"mobile_key", authReq.MobileKey},
+		},
+		bson.D{{
+			"$set", bson.D{
+				{"refresh_token", refresh.Tok},
+				{"expires_in_r", refresh.Expired},
+				{"access_token", access.Tok},
+				{"expires_in_a", access.Expired},
+				{"last_visit", getCurrentTime()},
+			}}})
 
 	if errUpdate != nil {
 		log.Errorf("UpdateSession error:\n", errUpdate)
