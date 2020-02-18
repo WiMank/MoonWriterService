@@ -3,7 +3,7 @@ package response
 import log "github.com/sirupsen/logrus"
 
 type UserResponse struct {
-	AppResponse AppResponseInterface `json:"user_response"`
+	AppResponse AppResponse `json:"user_response"`
 }
 
 type UserCreatedResponse struct {
@@ -12,8 +12,8 @@ type UserCreatedResponse struct {
 	Desc    string `json:"desc"`
 }
 
-func (uc *UserCreatedResponse) PrintLog(err error) {
-	log.Info(uc.Message, err)
+func (uc *UserCreatedResponse) PrintLog() {
+	log.Info(uc.Message)
 }
 
 func (uc *UserCreatedResponse) GetStatusCode() int {
@@ -26,8 +26,8 @@ type UserExistResponse struct {
 	Desc    string `json:"desc"`
 }
 
-func (uex *UserExistResponse) PrintLog(err error) {
-	log.Errorf(uex.Message, err)
+func (uex *UserExistResponse) PrintLog() {
+	log.Info(uex.Message)
 }
 
 func (uex *UserExistResponse) GetStatusCode() int {
@@ -40,8 +40,8 @@ type UserFindResponse struct {
 	Desc    string `json:"desc"`
 }
 
-func (ufe *UserFindResponse) PrintLog(err error) {
-	log.Errorf(ufe.Message, err)
+func (ufe *UserFindResponse) PrintLog() {
+	log.Info(ufe.Message)
 }
 
 func (ufe *UserFindResponse) GetStatusCode() int {
@@ -54,8 +54,8 @@ type UserInsertErrorResponse struct {
 	Desc    string `json:"desc"`
 }
 
-func (ur *UserInsertErrorResponse) PrintLog(err error) {
-	log.Errorf(ur.Message, err)
+func (ur *UserInsertErrorResponse) PrintLog() {
+	log.Info(ur.Message)
 }
 
 func (ur *UserInsertErrorResponse) GetStatusCode() int {

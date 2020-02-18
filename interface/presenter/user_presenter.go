@@ -11,17 +11,17 @@ type userPresenter struct {
 }
 
 type UserPresenter interface {
-	NewUserResponse(w http.ResponseWriter, appResponse response.AppResponseInterface)
+	NewUserResponse(w http.ResponseWriter, appResponse response.AppResponse)
 }
 
 func NewUserPresenter() UserPresenter {
 	return &userPresenter{}
 }
 
-func (up *userPresenter) NewUserResponse(w http.ResponseWriter, appResponse response.AppResponseInterface) {
+func (up *userPresenter) NewUserResponse(w http.ResponseWriter, appResponse response.AppResponse) {
 	w.WriteHeader(appResponse.GetStatusCode())
 	err := json.NewEncoder(w).Encode(response.UserResponse{AppResponse: appResponse})
 	if err != nil {
-		log.Errorf("Encode User response", err)
+		log.Errorf("NewUserResponse encode error:\n", err)
 	}
 }

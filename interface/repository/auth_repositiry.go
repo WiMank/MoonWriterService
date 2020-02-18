@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/WiMank/MoonWriterService/domain"
 	"github.com/WiMank/MoonWriterService/interface/request"
 	"github.com/WiMank/MoonWriterService/interface/response"
@@ -18,48 +17,60 @@ import (
 type authRepository struct {
 	collectionUsers    *mongo.Collection
 	collectionSessions *mongo.Collection
+	responseCreator    response.AppResponseCreator
 }
 
 type AuthRepository interface {
 	DecodeRequest(r *http.Request) request.AuthenticateUserRequest
-	AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponseInterface
+	AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponse
 }
 
-func NewAuthRepository(collectionUsers *mongo.Collection, collectionSessions *mongo.Collection) AuthRepository {
-	return &authRepository{collectionUsers, collectionSessions}
+func NewAuthRepository(collectionUsers *mongo.Collection, collectionSessions *mongo.Collection, responseCreator response.AppResponseCreator) AuthRepository {
+	return &authRepository{collectionUsers, collectionSessions, responseCreator}
 }
 
 func (ar *authRepository) DecodeRequest(r *http.Request) request.AuthenticateUserRequest {
 	var requestUser request.AuthenticateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&requestUser); err != nil {
-		log.Error("Decode User response ERROR ", err)
+		log.Errorf("Decode User response error:\n", err)
 	}
 	return requestUser
 }
 
-func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponseInterface {
-	var localUserEntity, errUser = ar.findUserEntity(authReq)
-	var session, errSession = ar.findSession(authReq.MobileKey)
-	if errUser != nil {
-		return createUserFindResponse(errUser)
-	}
-	if errSession != nil {
-		log.Errorf("FindSession error:\n", errSession)
+func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponse {
+	var errAuthenticate error
+	localUserEntity, errAuthenticate := ar.findUserEntity(authReq)
+	session, errAuthenticate := ar.findSession(authReq.MobileKey)
+
+	if errAuthenticate != nil {
+		return ar.responseCreator.CreateResponse(response.UserFindResponse{}, authReq.User.UserName)
 	}
 
 	if localUserEntity.CheckUserNameAndPass(authReq.User) {
 		ar.checkSessionsCount(authReq)
-		access := createAccessToken(authReq)
-		refresh := createRefreshToken(authReq)
+		access, errAuthenticate := createAccessToken(authReq)
+		refresh, errAuthenticate := createRefreshToken(authReq)
+		if errAuthenticate != nil {
+			return ar.responseCreator.CreateResponse(response.TokenErrorResponse{}, authReq.User.UserName)
+		}
+
 		if session.CheckMkExist(authReq.MobileKey) {
 			ar.updateSession(access, refresh, authReq)
 		} else {
 			ar.insertSession(access, refresh, authReq)
 		}
-		return createTokenResponse(access, refresh, authReq)
-	}
 
-	return creteUnauthorizedResponse()
+		return ar.responseCreator.CreateResponse(
+			response.TokenResponse{
+				AccessToken:  access.Tok,
+				RefreshToken: refresh.Tok,
+				ExpiresInA:   access.Expired,
+				ExpiresInR:   refresh.Expired,
+			},
+			authReq.User.UserName,
+		)
+	}
+	return ar.responseCreator.CreateResponse(response.UnauthorizedResponse{}, authReq.User.UserName)
 }
 
 func (ar *authRepository) findUserEntity(authReq request.AuthenticateUserRequest) (*domain.UserEntity, error) {
@@ -98,14 +109,14 @@ func (ar *authRepository) checkSessionsCount(authReq request.AuthenticateUserReq
 func (ar *authRepository) clearSessions(ctx context.Context, userBson bson.M) {
 	result, errDelete := ar.collectionSessions.DeleteMany(ctx, userBson)
 	if errDelete != nil {
-		log.Errorf("ClearSessions error: \n", errDelete)
+		log.Errorf("ClearSessions error:\n", errDelete)
 	}
 	if result != nil {
 		log.Info("Delete result: ", result.DeletedCount)
 	}
 }
 
-func createAccessToken(aur request.AuthenticateUserRequest) domain.Token {
+func createAccessToken(aur request.AuthenticateUserRequest) (*domain.Token, error) {
 	tokenTime := getCurrentTime() + 36e2
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user":    aur.User.UserName,
@@ -114,23 +125,16 @@ func createAccessToken(aur request.AuthenticateUserRequest) domain.Token {
 	})
 	tokenString, err := token.SignedString([]byte(domain.SecretKey))
 	if err != nil {
-
+		log.Errorf("Access token signed error:\n", err)
+		return nil, err
 	}
-	return domain.Token{
+	return &domain.Token{
 		Tok:     tokenString,
 		Expired: tokenTime,
-	}
+	}, nil
 }
 
-func (ar *authRepository) insertSession(acc domain.Token, ref domain.Token, authReq request.AuthenticateUserRequest) {
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	_, err := ar.collectionSessions.InsertOne(ctx, createSession(acc, ref, authReq))
-	if err != nil {
-		log.Error("InsertSession error:\n", err)
-	}
-}
-
-func createRefreshToken(aur request.AuthenticateUserRequest) domain.Token {
+func createRefreshToken(aur request.AuthenticateUserRequest) (*domain.Token, error) {
 	tokenTime := getCurrentTime() + 2592e3
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"time":    tokenTime,
@@ -139,19 +143,24 @@ func createRefreshToken(aur request.AuthenticateUserRequest) domain.Token {
 	})
 	tokenString, err := token.SignedString([]byte(domain.SecretKey))
 	if err != nil {
-
+		log.Errorf("Refresh token signed error:\n", err)
+		return nil, err
 	}
-	return domain.Token{
+	return &domain.Token{
 		Tok:     tokenString,
 		Expired: tokenTime,
+	}, nil
+}
+
+func (ar *authRepository) insertSession(access *domain.Token, refresh *domain.Token, authReq request.AuthenticateUserRequest) {
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	_, err := ar.collectionSessions.InsertOne(ctx, createSession(access, refresh, authReq))
+	if err != nil {
+		log.Errorf("InsertSession error:\n", err)
 	}
 }
 
-func getCurrentTime() int64 {
-	return time.Now().Unix()
-}
-
-func (ar *authRepository) updateSession(access domain.Token, refresh domain.Token, authReq request.AuthenticateUserRequest) {
+func (ar *authRepository) updateSession(access *domain.Token, refresh *domain.Token, authReq request.AuthenticateUserRequest) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	_, errUpdate := ar.collectionSessions.UpdateOne(ctx,
 		bson.D{{"user_name", authReq.User.UserName}, {"mobile_key", authReq.MobileKey}},
@@ -164,52 +173,22 @@ func (ar *authRepository) updateSession(access domain.Token, refresh domain.Toke
 		}}})
 
 	if errUpdate != nil {
-		log.Error("UpdateSession ERROR: ", errUpdate)
+		log.Errorf("UpdateSession error:\n", errUpdate)
 	}
 }
 
-func createSession(acc domain.Token, ref domain.Token, authReq request.AuthenticateUserRequest) domain.SessionEntity {
+func createSession(access *domain.Token, refresh *domain.Token, authReq request.AuthenticateUserRequest) domain.SessionEntity {
 	return domain.SessionEntity{
 		UserName:     authReq.User.UserName,
-		RefreshToken: ref.Tok,
-		ExpiresInR:   ref.Expired,
-		AccessToken:  acc.Tok,
-		ExpiresInA:   acc.Expired,
+		RefreshToken: refresh.Tok,
+		ExpiresInR:   refresh.Expired,
+		AccessToken:  access.Tok,
+		ExpiresInA:   access.Expired,
 		LastVisit:    getCurrentTime(),
 		MobileKey:    authReq.MobileKey,
 	}
 }
 
-func createUserFindResponse(err error) *response.UserFindResponse {
-	s := response.UserFindResponse{
-		Message: "User not found",
-		Code:    http.StatusBadRequest,
-		Desc:    http.StatusText(http.StatusBadRequest),
-	}
-	s.PrintLog(err)
-	return &s
-}
-
-func createTokenResponse(acc domain.Token, ref domain.Token, authReq request.AuthenticateUserRequest) *response.TokenResponse {
-	tokenResponse := response.TokenResponse{
-		Message:      fmt.Sprintf("Tokens created for %s", authReq.User.UserName),
-		Code:         http.StatusOK,
-		Desc:         http.StatusText(http.StatusOK),
-		RefreshToken: ref.Tok,
-		ExpiresInR:   ref.Expired,
-		AccessToken:  acc.Tok,
-		ExpiresInA:   acc.Expired,
-	}
-	tokenResponse.PrintLog(nil)
-	return &tokenResponse
-}
-
-func creteUnauthorizedResponse() *response.UnauthorizedResponse {
-	unauthorized := response.UnauthorizedResponse{
-		Message: "Unauthorized",
-		Code:    http.StatusUnauthorized,
-		Desc:    http.StatusText(http.StatusUnauthorized),
-	}
-	unauthorized.PrintLog(nil)
-	return &unauthorized
+func getCurrentTime() int64 {
+	return time.Now().Unix()
 }

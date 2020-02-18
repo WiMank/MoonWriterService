@@ -5,6 +5,7 @@ import (
 	"github.com/WiMank/MoonWriterService/interface/controller"
 	"github.com/WiMank/MoonWriterService/interface/presenter"
 	"github.com/WiMank/MoonWriterService/interface/repository"
+	"github.com/WiMank/MoonWriterService/interface/response"
 	"github.com/WiMank/MoonWriterService/usecase"
 )
 
@@ -20,9 +21,14 @@ func (r *registry) CreateAuthRepository() repository.AuthRepository {
 	return repository.NewAuthRepository(
 		r.db.Database(domain.DataBaseName).Collection("users"),
 		r.db.Database(domain.DataBaseName).Collection("sessions"),
+		r.CreateAppResponseCreator(),
 	)
 }
 
 func (r *registry) CreateAuthPresenter() presenter.AuthPresenter {
 	return presenter.NewAuthPresenter()
+}
+
+func (r *registry) CreateAppResponseCreator() response.AppResponseCreator {
+	return response.NewAppResponseCreator()
 }
