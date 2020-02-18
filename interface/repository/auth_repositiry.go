@@ -49,7 +49,7 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 
 	if localUserEntity.CheckUserNameAndPass(authReq.User) {
 		ar.checkSessionsCount(authReq)
-		access, errAuthenticate := createAccessToken(authReq)
+		access, errAuthenticate := createAccessToken(authReq, localUserEntity)
 		refresh, errAuthenticate := createRefreshToken(authReq)
 
 		if errAuthenticate != nil {
@@ -118,11 +118,11 @@ func (ar *authRepository) clearSessions(ctx context.Context, userBson bson.M) {
 	}
 }
 
-func createAccessToken(aur request.AuthenticateUserRequest) (*domain.Token, error) {
+func createAccessToken(aur request.AuthenticateUserRequest, entity *domain.UserEntity) (*domain.Token, error) {
 	tokenTime := getCurrentTime() + 36e2
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user":    aur.User.UserName,
-		"role":    aur.User.UserRole,
+		"role":    entity.UserRole,
 		"expired": tokenTime,
 	})
 	tokenString, err := token.SignedString([]byte(config.SecretKey))
