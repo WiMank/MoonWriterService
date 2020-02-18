@@ -14,7 +14,7 @@ func (ue *UserEntity) CheckUserExist(newUser UserEntity) bool {
 	}
 }
 
-func (ue *UserEntity) CheckUserCredentialsValid(newUser UserEntity) bool {
+func (ue *UserEntity) CheckUserNameAndPass(newUser UserEntity) bool {
 	if (ue.UserName == newUser.UserName) && (ue.UserPass == newUser.UserPass) {
 		return true
 	} else {
