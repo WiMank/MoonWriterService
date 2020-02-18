@@ -3,7 +3,7 @@ package response
 import log "github.com/sirupsen/logrus"
 
 type SessionResponse struct {
-	AppResponse AppResponse `json:"auth_response"`
+	AppResponse AppResponseInterface `json:"auth_response"`
 }
 
 type TokenResponse struct {

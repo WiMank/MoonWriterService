@@ -11,14 +11,14 @@ type authPresenter struct {
 }
 
 type AuthPresenter interface {
-	AuthResponse(w http.ResponseWriter, appResponse response.AppResponse)
+	AuthResponse(w http.ResponseWriter, appResponse response.AppResponseInterface)
 }
 
 func NewAuthPresenter() AuthPresenter {
 	return &authPresenter{}
 }
 
-func (ap *authPresenter) AuthResponse(w http.ResponseWriter, appResponse response.AppResponse) {
+func (ap *authPresenter) AuthResponse(w http.ResponseWriter, appResponse response.AppResponseInterface) {
 	w.WriteHeader(appResponse.GetStatusCode())
 	err := json.NewEncoder(w).Encode(response.SessionResponse{AppResponse: appResponse})
 	if err != nil {

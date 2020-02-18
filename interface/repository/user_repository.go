@@ -20,7 +20,7 @@ type userRepository struct {
 
 type UserRepository interface {
 	DecodeRequest(r *http.Request) request.UserRegistrationRequest
-	InsertUser(request request.UserRegistrationRequest) response.AppResponse
+	InsertUser(request request.UserRegistrationRequest) response.AppResponseInterface
 }
 
 func NewUserRepository(collection *mongo.Collection) UserRepository {
@@ -35,7 +35,7 @@ func (ur *userRepository) DecodeRequest(r *http.Request) request.UserRegistratio
 	return requestUser
 }
 
-func (ur *userRepository) InsertUser(request request.UserRegistrationRequest) response.AppResponse {
+func (ur *userRepository) InsertUser(request request.UserRegistrationRequest) response.AppResponseInterface {
 	var localUserEntity domain.UserEntity
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 

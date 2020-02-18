@@ -1,6 +1,10 @@
 package response
 
-type AppResponse interface {
+type AppResponseInterface interface {
 	PrintLog(err error)
 	GetStatusCode() int
+}
+
+type AppResponseCreator interface {
+	CreateResponse() AppResponseInterface
 }

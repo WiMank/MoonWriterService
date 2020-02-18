@@ -22,7 +22,7 @@ type authRepository struct {
 
 type AuthRepository interface {
 	DecodeRequest(r *http.Request) request.AuthenticateUserRequest
-	AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponse
+	AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponseInterface
 }
 
 func NewAuthRepository(collectionUsers *mongo.Collection, collectionSessions *mongo.Collection) AuthRepository {
@@ -32,19 +32,19 @@ func NewAuthRepository(collectionUsers *mongo.Collection, collectionSessions *mo
 func (ar *authRepository) DecodeRequest(r *http.Request) request.AuthenticateUserRequest {
 	var requestUser request.AuthenticateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&requestUser); err != nil {
-		log.Error("Decode User response! ", err)
+		log.Error("Decode User response ERROR ", err)
 	}
 	return requestUser
 }
 
-func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponse {
+func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponseInterface {
 	var localUserEntity, errUser = ar.findUserEntity(authReq)
 	var session, errSession = ar.findSession(authReq.MobileKey)
 	if errUser != nil {
 		return createUserFindResponse(errUser)
 	}
 	if errSession != nil {
-		log.Error("FindSession error:\n", errSession)
+		log.Errorf("FindSession error:\n", errSession)
 	}
 
 	if localUserEntity.CheckUserNameAndPass(authReq.User) {
@@ -52,12 +52,13 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 		access := createAccessToken(authReq)
 		refresh := createRefreshToken(authReq)
 		if session.CheckMkExist(authReq.MobileKey) {
-			ar.updateSession(refresh, access, authReq)
+			ar.updateSession(access, refresh, authReq)
 		} else {
 			ar.insertSession(access, refresh, authReq)
 		}
 		return createTokenResponse(access, refresh, authReq)
 	}
+
 	return creteUnauthorizedResponse()
 }
 
@@ -150,7 +151,7 @@ func getCurrentTime() int64 {
 	return time.Now().Unix()
 }
 
-func (ar *authRepository) updateSession(refresh domain.Token, access domain.Token, authReq request.AuthenticateUserRequest) {
+func (ar *authRepository) updateSession(access domain.Token, refresh domain.Token, authReq request.AuthenticateUserRequest) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	_, errUpdate := ar.collectionSessions.UpdateOne(ctx,
 		bson.D{{"user_name", authReq.User.UserName}, {"mobile_key", authReq.MobileKey}},
@@ -163,7 +164,7 @@ func (ar *authRepository) updateSession(refresh domain.Token, access domain.Toke
 		}}})
 
 	if errUpdate != nil {
-		log.Error("Refresh token ERROR: ", errUpdate)
+		log.Error("UpdateSession ERROR: ", errUpdate)
 	}
 }
 
