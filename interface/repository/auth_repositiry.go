@@ -78,6 +78,7 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 			authReq.User.UserName,
 		)
 	}
+
 	return ar.responseCreator.CreateResponse(response.UnauthorizedResponse{}, authReq.User.UserName)
 }
 
