@@ -1,6 +1,8 @@
 package response
 
-import log "github.com/sirupsen/logrus"
+import (
+	log "github.com/sirupsen/logrus"
+)
 
 type SessionResponse struct {
 	AppResponse AppResponse `json:"auth_response"`
@@ -50,4 +52,32 @@ func (ter *TokenErrorResponse) PrintLog() {
 
 func (ter *TokenErrorResponse) GetStatusCode() int {
 	return ter.Code
+}
+
+type SessionUpdateFailedResponse struct {
+	Message string `json:"message"`
+	Code    int    `json:"code"`
+	Desc    string `json:"desc"`
+}
+
+func (suf *SessionUpdateFailedResponse) PrintLog() {
+	log.Info(suf.Message)
+}
+
+func (suf *SessionUpdateFailedResponse) GetStatusCode() int {
+	return suf.Code
+}
+
+type SessionInsertFailedResponse struct {
+	Message string `json:"message"`
+	Code    int    `json:"code"`
+	Desc    string `json:"desc"`
+}
+
+func (sif *SessionInsertFailedResponse) PrintLog() {
+	log.Info(sif.Message)
+}
+
+func (sif *SessionInsertFailedResponse) GetStatusCode() int {
+	return sif.Code
 }

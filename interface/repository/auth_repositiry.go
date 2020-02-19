@@ -57,9 +57,15 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 		}
 
 		if (session != nil) && (session.CheckMkExist(authReq.MobileKey)) {
-			ar.updateSession(access, refresh, localUserEntity, authReq)
+			updateErr := ar.updateSession(access, refresh, localUserEntity, authReq)
+			if updateErr != nil {
+				ar.responseCreator.CreateResponse(response.SessionUpdateFailedResponse{}, authReq.User.UserName)
+			}
 		} else {
-			ar.insertSession(access, refresh, authReq, localUserEntity)
+			insertErr := ar.insertSession(access, refresh, authReq, localUserEntity)
+			if insertErr != nil {
+				ar.responseCreator.CreateResponse(response.SessionInsertFailedResponse{}, authReq.User.UserName)
+			}
 		}
 
 		return ar.responseCreator.CreateResponse(
@@ -154,15 +160,16 @@ func createRefreshToken(entity *domain.UserEntity) (*domain.Token, error) {
 	}, nil
 }
 
-func (ar *authRepository) insertSession(access *domain.Token, refresh *domain.Token, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) {
+func (ar *authRepository) insertSession(access *domain.Token, refresh *domain.Token, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) error {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	_, err := ar.collectionSessions.InsertOne(ctx, createSession(access, refresh, authReq, entity))
-	if err != nil {
-		log.Errorf("InsertSession error:\n", err)
+	_, errInsert := ar.collectionSessions.InsertOne(ctx, createSession(access, refresh, authReq, entity))
+	if errInsert != nil {
+		return errInsert
 	}
+	return nil
 }
 
-func (ar *authRepository) updateSession(access *domain.Token, refresh *domain.Token, entity *domain.UserEntity, authReq request.AuthenticateUserRequest) {
+func (ar *authRepository) updateSession(access *domain.Token, refresh *domain.Token, entity *domain.UserEntity, authReq request.AuthenticateUserRequest) error {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	_, errUpdate := ar.collectionSessions.UpdateOne(ctx,
 		bson.D{
@@ -180,8 +187,9 @@ func (ar *authRepository) updateSession(access *domain.Token, refresh *domain.To
 			}}})
 
 	if errUpdate != nil {
-		log.Errorf("UpdateSession error:\n", errUpdate)
+		return errUpdate
 	}
+	return nil
 }
 
 func createSession(access *domain.Token, refresh *domain.Token, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) domain.SessionEntity {

@@ -71,6 +71,18 @@ func (c *concreteAppResponseCreator) CreateResponse(i interface{}, userName stri
 			Code:    http.StatusInternalServerError,
 			Desc:    http.StatusText(http.StatusInternalServerError),
 		}
+	case SessionUpdateFailedResponse:
+		appResponse = &TokenErrorResponse{
+			Message: fmt.Sprintf("Error updating session for user [%s]", userName),
+			Code:    http.StatusInternalServerError,
+			Desc:    http.StatusText(http.StatusInternalServerError),
+		}
+	case SessionInsertFailedResponse:
+		appResponse = &TokenErrorResponse{
+			Message: fmt.Sprintf("Session insert error for user [%s]", userName),
+			Code:    http.StatusInternalServerError,
+			Desc:    http.StatusText(http.StatusInternalServerError),
+		}
 	default:
 		log.Fatal("Unknown Response")
 	}
