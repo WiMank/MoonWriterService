@@ -62,9 +62,7 @@ func (c *concreteAppResponseCreator) CreateResponse(i interface{}, userName stri
 			Desc:         http.StatusText(http.StatusOK),
 			SessionId:    t.SessionId,
 			RefreshToken: t.RefreshToken,
-			ExpiresInR:   t.ExpiresInR,
 			AccessToken:  t.AccessToken,
-			ExpiresInA:   t.ExpiresInA,
 		}
 	case UpdateTokenResponse:
 		appResponse = &UpdateTokenResponse{
@@ -72,9 +70,7 @@ func (c *concreteAppResponseCreator) CreateResponse(i interface{}, userName stri
 			Code:         http.StatusOK,
 			Desc:         http.StatusText(http.StatusOK),
 			RefreshToken: t.RefreshToken,
-			ExpiresInR:   t.ExpiresInR,
 			AccessToken:  t.AccessToken,
-			ExpiresInA:   t.ExpiresInA,
 		}
 	case TokenErrorResponse:
 		appResponse = &TokenErrorResponse{
@@ -93,6 +89,12 @@ func (c *concreteAppResponseCreator) CreateResponse(i interface{}, userName stri
 			Message: fmt.Sprintf("Session insert error for user [%s]", userName),
 			Code:    http.StatusInternalServerError,
 			Desc:    http.StatusText(http.StatusInternalServerError),
+		}
+	case InvalidSession:
+		appResponse = &TokenErrorResponse{
+			Message: fmt.Sprintf("INVALID SESSION"),
+			Code:    http.StatusBadRequest,
+			Desc:    http.StatusText(http.StatusBadRequest),
 		}
 	default:
 		log.Fatal("Unknown Response")

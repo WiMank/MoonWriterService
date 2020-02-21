@@ -16,7 +16,7 @@ func NewRouter(appController controller.AppController) {
 	router := mux.NewRouter()
 	router.HandleFunc("/user", appController.GetUserController().PostUser).Methods(POST)
 	router.HandleFunc("/user/auth/login", appController.GetAuthController().AuthenticationUser).Methods(GET)
-	router.HandleFunc("/user/auth/refresh", appController.GetAuthController().AuthenticationUser).Methods(GET)
+	router.HandleFunc("/user/auth/refresh", appController.GetRefreshController().RefreshUserTokens).Methods(GET)
 	http.Handle("/", router)
 	log.Fatal(http.ListenAndServe("localhost:8000", nil))
 }

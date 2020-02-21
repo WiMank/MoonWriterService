@@ -9,6 +9,7 @@ type appController struct {
 type AppController interface {
 	GetUserController() UserController
 	GetAuthController() AuthController
+	GetRefreshController() RefreshController
 }
 
 func NewAppController(uc UserController, ac AuthController, rc RefreshController) AppController {
@@ -21,4 +22,8 @@ func (a appController) GetUserController() UserController {
 
 func (a appController) GetAuthController() AuthController {
 	return a.ac
+}
+
+func (a appController) GetRefreshController() RefreshController {
+	return a.rc
 }

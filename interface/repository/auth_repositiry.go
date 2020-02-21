@@ -64,10 +64,8 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 			}
 			return ar.responseCreator.CreateResponse(
 				response.UpdateTokenResponse{
-					AccessToken:  access.Tok,
-					RefreshToken: refresh.Tok,
-					ExpiresInA:   access.Expired,
-					ExpiresInR:   refresh.Expired,
+					AccessToken:  access,
+					RefreshToken: refresh,
 				},
 				authReq.User.UserName,
 			)
@@ -79,10 +77,8 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 			return ar.responseCreator.CreateResponse(
 				response.InsertTokenResponse{
 					SessionId:    insertResult,
-					AccessToken:  access.Tok,
-					RefreshToken: refresh.Tok,
-					ExpiresInA:   access.Expired,
-					ExpiresInR:   refresh.Expired,
+					AccessToken:  access,
+					RefreshToken: refresh,
 				},
 				authReq.User.UserName,
 			)
@@ -134,43 +130,38 @@ func (ar *authRepository) clearSessions(ctx context.Context, userBson bson.M) {
 	}
 }
 
-func createAccessToken(entity *domain.UserEntity) (*domain.Token, error) {
+func createAccessToken(entity *domain.UserEntity) (string, error) {
 	tokenTime := getCurrentTime() + 36e2
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user":    entity.Id,
-		"role":    entity.UserRole,
-		"expired": tokenTime,
+		"iss":  "Moon Writer",
+		"user": entity.Id,
+		"role": entity.UserRole,
+		"exp":  tokenTime,
 	})
 	tokenString, err := token.SignedString([]byte(config.SecretKey))
 	if err != nil {
 		log.Errorf("Access token signed error:\n", err)
-		return nil, err
+		return "", err
 	}
-	return &domain.Token{
-		Tok:     tokenString,
-		Expired: tokenTime,
-	}, nil
+	return tokenString, nil
 }
 
-func createRefreshToken(entity *domain.UserEntity) (*domain.Token, error) {
+func createRefreshToken(entity *domain.UserEntity) (string, error) {
 	tokenTime := getCurrentTime() + 2592e3
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"time":    tokenTime,
-		"user":    entity.Id,
-		"expired": tokenTime,
+		"iss":  "Moon Writer",
+		"user": entity.Id,
+		"exp":  tokenTime,
 	})
 	tokenString, err := token.SignedString([]byte(config.SecretKey))
 	if err != nil {
 		log.Errorf("Refresh token signed error:\n", err)
-		return nil, err
+		return "", err
 	}
-	return &domain.Token{
-		Tok:     tokenString,
-		Expired: tokenTime,
-	}, nil
+	return tokenString, nil
 }
 
-func (ar *authRepository) insertSession(access *domain.Token, refresh *domain.Token, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) (string, error) {
+func (ar *authRepository) insertSession(access string, refresh string, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) (string, error) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	insertResult, errInsert := ar.collectionSessions.InsertOne(ctx, createSession(access, refresh, authReq, entity))
 	if errInsert != nil {
@@ -179,7 +170,7 @@ func (ar *authRepository) insertSession(access *domain.Token, refresh *domain.To
 	return insertResult.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func (ar *authRepository) updateSession(access *domain.Token, refresh *domain.Token, entity *domain.UserEntity, authReq request.AuthenticateUserRequest) error {
+func (ar *authRepository) updateSession(access string, refresh string, entity *domain.UserEntity, authReq request.AuthenticateUserRequest) error {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	_, errUpdate := ar.collectionSessions.UpdateOne(ctx,
 		bson.D{
@@ -189,10 +180,8 @@ func (ar *authRepository) updateSession(access *domain.Token, refresh *domain.To
 		},
 		bson.D{{
 			"$set", bson.D{
-				{"refresh_token", refresh.Tok},
-				{"expires_in_r", refresh.Expired},
-				{"access_token", access.Tok},
-				{"expires_in_a", access.Expired},
+				{"refresh_token", refresh},
+				{"access_token", access},
 				{"last_visit", getCurrentTime()},
 			}}})
 
@@ -202,14 +191,13 @@ func (ar *authRepository) updateSession(access *domain.Token, refresh *domain.To
 	return nil
 }
 
-func createSession(access *domain.Token, refresh *domain.Token, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) domain.SessionEntity {
+func createSession(access string, refresh string, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) domain.SessionEntity {
 	return domain.SessionEntity{
 		UserId:       entity.Id,
 		UserName:     authReq.User.UserName,
-		RefreshToken: refresh.Tok,
-		ExpiresInR:   refresh.Expired,
-		AccessToken:  access.Tok,
-		ExpiresInA:   access.Expired,
+		UserRole:     entity.UserRole,
+		RefreshToken: refresh,
+		AccessToken:  access,
 		LastVisit:    getCurrentTime(),
 		MobileKey:    authReq.MobileKey,
 	}

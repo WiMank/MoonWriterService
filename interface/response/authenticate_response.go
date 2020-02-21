@@ -14,9 +14,7 @@ type InsertTokenResponse struct {
 	Desc         string `json:"desc"`
 	SessionId    string `json:"session_id"`
 	RefreshToken string `json:"refresh_token"`
-	ExpiresInR   int64  `json:"expires_in_r"`
 	AccessToken  string `json:"access_token"`
-	ExpiresInA   int64  `json:"expires_in_a"`
 }
 
 func (tr *InsertTokenResponse) PrintLog() {
@@ -32,9 +30,7 @@ type UpdateTokenResponse struct {
 	Code         int    `json:"code"`
 	Desc         string `json:"desc"`
 	RefreshToken string `json:"refresh_token"`
-	ExpiresInR   int64  `json:"expires_in_r"`
 	AccessToken  string `json:"access_token"`
-	ExpiresInA   int64  `json:"expires_in_a"`
 }
 
 func (tr *UpdateTokenResponse) PrintLog() {

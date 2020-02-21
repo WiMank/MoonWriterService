@@ -20,5 +20,7 @@ func NewRefreshInteractor(repository repository.RefreshRepository, presenter pre
 }
 
 func (ri *refreshInteractor) Refresh(w http.ResponseWriter, r *http.Request) {
-
+	decodeResult := ri.repository.DecodeRequest(r)
+	response := ri.repository.Refresh(decodeResult)
+	ri.presenter.RefreshResponse(w, response)
 }

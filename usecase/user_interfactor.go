@@ -22,5 +22,5 @@ func NewUserInteractor(repository repository.UserRepository, presenter presenter
 func (ui *userInteractor) Insert(w http.ResponseWriter, r *http.Request) {
 	decodeResult := ui.repository.DecodeRequest(r)
 	insertResponse := ui.repository.InsertUser(decodeResult)
-	ui.presenter.NewUserResponse(w, insertResponse)
+	ui.presenter.UserResponse(w, insertResponse)
 }
