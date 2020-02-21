@@ -7,14 +7,14 @@ import (
 )
 
 type userController struct {
-	interactor usecase.UserInteractor
+	interactor usecase.RegistrationInteractor
 }
 
 type UserController interface {
 	RegistrationUser(w http.ResponseWriter, r *http.Request)
 }
 
-func NewUserController(interactor usecase.UserInteractor) UserController {
+func NewUserController(interactor usecase.RegistrationInteractor) UserController {
 	return &userController{interactor}
 }
 

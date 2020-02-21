@@ -6,20 +6,20 @@ import (
 	"net/http"
 )
 
-type userInteractor struct {
+type registrationInteractor struct {
 	repository repository.RegistrationRepository
 	presenter  presenter.RegistrationPresenter
 }
 
-type UserInteractor interface {
+type RegistrationInteractor interface {
 	Insert(w http.ResponseWriter, r *http.Request)
 }
 
-func NewUserInteractor(repository repository.RegistrationRepository, presenter presenter.RegistrationPresenter) UserInteractor {
-	return &userInteractor{repository, presenter}
+func NewRegistrationInteractor(repository repository.RegistrationRepository, presenter presenter.RegistrationPresenter) RegistrationInteractor {
+	return &registrationInteractor{repository, presenter}
 }
 
-func (ui *userInteractor) Insert(w http.ResponseWriter, r *http.Request) {
+func (ui *registrationInteractor) Insert(w http.ResponseWriter, r *http.Request) {
 	decodeResult := ui.repository.DecodeRequest(r)
 	insertResponse := ui.repository.InsertUser(decodeResult)
 	ui.presenter.RegistrationResponse(w, insertResponse)
