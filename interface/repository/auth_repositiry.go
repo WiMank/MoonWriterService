@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/WiMank/MoonWriterService/config"
 	"github.com/WiMank/MoonWriterService/domain"
 	"github.com/WiMank/MoonWriterService/interface/request"
@@ -58,30 +60,26 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 		}
 
 		if (session != nil) && (session.CheckMkExist(authReq.MobileKey)) {
-			updateErr := ar.updateSession(access, refresh, localUserEntity, authReq)
+			updateResult, updateErr := ar.updateSession(access, refresh, localUserEntity, authReq)
 			if updateErr != nil {
 				ar.responseCreator.CreateResponse(response.SessionUpdateFailedResponse{}, authReq.User.UserName)
 			}
-			return ar.responseCreator.CreateResponse(
-				response.UpdateTokenResponse{
-					AccessToken:  access,
-					RefreshToken: refresh,
-				},
-				authReq.User.UserName,
-			)
+			return ar.responseCreator.CreateResponse(response.TokenResponse{
+				Message:      fmt.Sprintf("Tokens updated for [%s]", localUserEntity.UserName),
+				SessionId:    updateResult,
+				AccessToken:  access,
+				RefreshToken: refresh}, authReq.User.UserName)
+
 		} else {
 			insertResult, insertErr := ar.insertSession(access, refresh, authReq, localUserEntity)
 			if insertErr != nil {
 				ar.responseCreator.CreateResponse(response.SessionInsertFailedResponse{}, authReq.User.UserName)
 			}
-			return ar.responseCreator.CreateResponse(
-				response.InsertTokenResponse{
-					SessionId:    insertResult,
-					AccessToken:  access,
-					RefreshToken: refresh,
-				},
-				authReq.User.UserName,
-			)
+			return ar.responseCreator.CreateResponse(response.TokenResponse{
+				Message:      fmt.Sprintf("Tokens created for [%s]", localUserEntity.UserName),
+				SessionId:    insertResult,
+				AccessToken:  access,
+				RefreshToken: refresh}, authReq.User.UserName)
 		}
 	}
 	return ar.responseCreator.CreateResponse(response.UnauthorizedResponse{}, authReq.User.UserName)
@@ -163,16 +161,25 @@ func createRefreshToken(entity *domain.UserEntity) (string, error) {
 
 func (ar *authRepository) insertSession(access string, refresh string, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) (string, error) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	insertResult, errInsert := ar.collectionSessions.InsertOne(ctx, createSession(access, refresh, authReq, entity))
+	newSession := createSession(access, refresh, authReq, entity)
+	insertResult, errInsert := ar.collectionSessions.InsertOne(ctx, bson.D{
+		{"user_id", newSession.UserId},
+		{"user_name", newSession.UserName},
+		{"user_role", newSession.UserRole},
+		{"refresh_token", newSession.RefreshToken},
+		{"access_token", newSession.AccessToken},
+		{"last_visit", newSession.LastVisit},
+		{"mobile_key", newSession.MobileKey},
+	})
 	if errInsert != nil {
 		return "", errInsert
 	}
 	return insertResult.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func (ar *authRepository) updateSession(access string, refresh string, entity *domain.UserEntity, authReq request.AuthenticateUserRequest) error {
+func (ar *authRepository) updateSession(access string, refresh string, entity *domain.UserEntity, authReq request.AuthenticateUserRequest) (string, error) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	_, errUpdate := ar.collectionSessions.UpdateOne(ctx,
+	res := ar.collectionSessions.FindOneAndUpdate(ctx,
 		bson.D{
 			{"user_name", entity.UserName},
 			{"user_id", entity.Id},
@@ -185,10 +192,12 @@ func (ar *authRepository) updateSession(access string, refresh string, entity *d
 				{"last_visit", getCurrentTime()},
 			}}})
 
-	if errUpdate != nil {
-		return errUpdate
+	var findSession domain.SessionEntity
+	decodeResult := res.Decode(&findSession)
+	if decodeResult != nil {
+		return "", errors.Unwrap(fmt.Errorf("UpdateSession Decode ERROR"))
 	}
-	return nil
+	return findSession.Id, nil
 }
 
 func createSession(access string, refresh string, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) domain.SessionEntity {

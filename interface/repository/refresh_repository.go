@@ -47,7 +47,15 @@ func (rr *refreshRepository) Refresh(request request.RefreshTokensRequest) respo
 
 	if localSession.RefreshToken == request.Refresh.RefreshToken {
 		if rr.validateToken(request.Refresh.RefreshToken) {
+			//access, errAuthenticate := createAccessToken(localUserEntity)
+			//refresh, errAuthenticate := createRefreshToken(localUserEntity)
 
+			//if errAuthenticate != nil {
+			//	return ar.responseCreator.CreateResponse(response.TokenErrorResponse{}, authReq.User.UserName)
+			//}
+			//	rr.responseCreator.CreateResponse(response.UpdateTokenResponse{RefreshToken:refresh, AccessToken:access}, "")
+		} else {
+			rr.responseCreator.CreateResponse(response.TokenExpired{}, "")
 		}
 	}
 

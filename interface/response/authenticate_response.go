@@ -8,7 +8,7 @@ type SessionResponse struct {
 	AppResponse AppResponse `json:"auth_response"`
 }
 
-type InsertTokenResponse struct {
+type TokenResponse struct {
 	Message      string `json:"message"`
 	Code         int    `json:"code"`
 	Desc         string `json:"desc"`
@@ -17,27 +17,11 @@ type InsertTokenResponse struct {
 	AccessToken  string `json:"access_token"`
 }
 
-func (tr *InsertTokenResponse) PrintLog() {
+func (tr *TokenResponse) PrintLog() {
 	log.Info(tr.Message)
 }
 
-func (tr *InsertTokenResponse) GetStatusCode() int {
-	return tr.Code
-}
-
-type UpdateTokenResponse struct {
-	Message      string `json:"message"`
-	Code         int    `json:"code"`
-	Desc         string `json:"desc"`
-	RefreshToken string `json:"refresh_token"`
-	AccessToken  string `json:"access_token"`
-}
-
-func (tr *UpdateTokenResponse) PrintLog() {
-	log.Info(tr.Message)
-}
-
-func (tr *UpdateTokenResponse) GetStatusCode() int {
+func (tr *TokenResponse) GetStatusCode() int {
 	return tr.Code
 }
 

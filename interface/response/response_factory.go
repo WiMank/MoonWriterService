@@ -55,20 +55,12 @@ func (c *concreteAppResponseCreator) CreateResponse(i interface{}, userName stri
 			Code:    http.StatusBadRequest,
 			Desc:    http.StatusText(http.StatusBadRequest),
 		}
-	case InsertTokenResponse:
-		appResponse = &InsertTokenResponse{
-			Message:      fmt.Sprintf("Tokens created for [%s]", userName),
+	case TokenResponse:
+		appResponse = &TokenResponse{
+			Message:      t.Message,
 			Code:         http.StatusOK,
 			Desc:         http.StatusText(http.StatusOK),
 			SessionId:    t.SessionId,
-			RefreshToken: t.RefreshToken,
-			AccessToken:  t.AccessToken,
-		}
-	case UpdateTokenResponse:
-		appResponse = &UpdateTokenResponse{
-			Message:      fmt.Sprintf("Tokens updated for [%s]", userName),
-			Code:         http.StatusOK,
-			Desc:         http.StatusText(http.StatusOK),
 			RefreshToken: t.RefreshToken,
 			AccessToken:  t.AccessToken,
 		}
@@ -93,6 +85,12 @@ func (c *concreteAppResponseCreator) CreateResponse(i interface{}, userName stri
 	case InvalidSession:
 		appResponse = &TokenErrorResponse{
 			Message: fmt.Sprintf("INVALID SESSION"),
+			Code:    http.StatusBadRequest,
+			Desc:    http.StatusText(http.StatusBadRequest),
+		}
+	case TokenExpired:
+		appResponse = &TokenErrorResponse{
+			Message: fmt.Sprintf("TOKEN EXPIRED"),
 			Code:    http.StatusBadRequest,
 			Desc:    http.StatusText(http.StatusBadRequest),
 		}
