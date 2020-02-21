@@ -5,8 +5,8 @@ type SessionEntity struct {
 	UserId       string `bson:"user_id"`
 	UserName     string `bson:"user_name"`
 	UserRole     string `bson:"user_role"`
-	RefreshToken string `bson:"refresh_token"`
 	AccessToken  string `bson:"access_token"`
+	RefreshToken string `bson:"refresh_token"`
 	LastVisit    int64  `bson:"last_visit"`
 	MobileKey    string `bson:"mobile_key"`
 }

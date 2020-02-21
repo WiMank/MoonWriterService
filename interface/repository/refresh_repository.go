@@ -42,24 +42,28 @@ func (rr *refreshRepository) DecodeRequest(r *http.Request) request.RefreshToken
 func (rr *refreshRepository) Refresh(request request.RefreshTokensRequest) response.AppResponse {
 	localSession, err := rr.findSession(request)
 	if err != nil {
-		return rr.responseCreator.CreateResponse(response.InvalidSession{}, "")
+		return rr.responseCreator.CreateResponse(response.InvalidSession{}, request.Refresh.SessionId)
 	}
 
-	if localSession.RefreshToken == request.Refresh.RefreshToken {
-		if rr.validateToken(request.Refresh.RefreshToken) {
-			//access, errAuthenticate := createAccessToken(localUserEntity)
-			//refresh, errAuthenticate := createRefreshToken(localUserEntity)
-
-			//if errAuthenticate != nil {
-			//	return ar.responseCreator.CreateResponse(response.TokenErrorResponse{}, authReq.User.UserName)
-			//}
-			//	rr.responseCreator.CreateResponse(response.UpdateTokenResponse{RefreshToken:refresh, AccessToken:access}, "")
-		} else {
-			rr.responseCreator.CreateResponse(response.TokenExpired{}, "")
+	if rr.validateToken(request.Refresh.RefreshToken) {
+		access, errAuthenticate := rr.createAccessToken(localSession)
+		refresh, errAuthenticate := rr.createRefreshToken(localSession)
+		if errAuthenticate != nil {
+			return rr.responseCreator.CreateResponse(response.TokenErrorResponse{}, localSession.UserName)
 		}
-	}
 
-	return rr.responseCreator.CreateResponse(response.InvalidSession{}, "")
+		errRefresh := rr.refreshSession(access, refresh, localSession)
+		if errRefresh != nil {
+			return rr.responseCreator.CreateResponse(response.RefreshSessionErrorResponse{}, localSession.UserName)
+		}
+
+		return rr.responseCreator.CreateResponse(response.TokenResponse{
+			Message:      fmt.Sprintf("Tokens refreshed for [%s]", localSession.UserName),
+			SessionId:    localSession.Id,
+			RefreshToken: refresh,
+			AccessToken:  access}, "")
+	}
+	return rr.responseCreator.CreateResponse(response.InvalidToken{}, localSession.UserName)
 }
 
 func (rr *refreshRepository) findSession(request request.RefreshTokensRequest) (*domain.SessionEntity, error) {
@@ -101,7 +105,7 @@ func (rr *refreshRepository) validateToken(refreshToken string) bool {
 	return false
 }
 
-func (rr *refreshRepository) createAccessToken(entity domain.SessionEntity) (string, error) {
+func (rr *refreshRepository) createAccessToken(entity *domain.SessionEntity) (string, error) {
 	tokenTime := getCurrentTime() + 36e2
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"iss":  "Moon Writer",
@@ -117,7 +121,7 @@ func (rr *refreshRepository) createAccessToken(entity domain.SessionEntity) (str
 	return tokenString, nil
 }
 
-func (rr *refreshRepository) createRefreshToken(entity domain.SessionEntity) (string, error) {
+func (rr *refreshRepository) createRefreshToken(entity *domain.SessionEntity) (string, error) {
 	tokenTime := getCurrentTime() + 2592e3
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"iss":  "Moon Writer",
@@ -130,4 +134,29 @@ func (rr *refreshRepository) createRefreshToken(entity domain.SessionEntity) (st
 		return "", err
 	}
 	return tokenString, nil
+}
+
+func (rr *refreshRepository) refreshSession(access string, refresh string, entity *domain.SessionEntity) error {
+	id, errHex := primitive.ObjectIDFromHex(entity.Id)
+	if errHex != nil {
+		return errHex
+	}
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	_, errUpdate := rr.collectionSessions.UpdateOne(ctx,
+		bson.D{
+			{"_id", id},
+			{"refresh_token", entity.RefreshToken},
+			{"mobile_key", entity.MobileKey},
+		},
+		bson.D{{
+			"$set", bson.D{
+				{"access_token", access},
+				{"refresh_token", refresh},
+				{"last_visit", getCurrentTime()},
+			}}})
+
+	if errUpdate != nil {
+		return errUpdate
+	}
+	return nil
 }

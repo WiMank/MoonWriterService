@@ -166,8 +166,8 @@ func (ar *authRepository) insertSession(access string, refresh string, authReq r
 		{"user_id", newSession.UserId},
 		{"user_name", newSession.UserName},
 		{"user_role", newSession.UserRole},
-		{"refresh_token", newSession.RefreshToken},
 		{"access_token", newSession.AccessToken},
+		{"refresh_token", newSession.RefreshToken},
 		{"last_visit", newSession.LastVisit},
 		{"mobile_key", newSession.MobileKey},
 	})
@@ -187,8 +187,8 @@ func (ar *authRepository) updateSession(access string, refresh string, entity *d
 		},
 		bson.D{{
 			"$set", bson.D{
-				{"refresh_token", refresh},
 				{"access_token", access},
+				{"refresh_token", refresh},
 				{"last_visit", getCurrentTime()},
 			}}})
 
@@ -205,8 +205,8 @@ func createSession(access string, refresh string, authReq request.AuthenticateUs
 		UserId:       entity.Id,
 		UserName:     authReq.User.UserName,
 		UserRole:     entity.UserRole,
-		RefreshToken: refresh,
 		AccessToken:  access,
+		RefreshToken: refresh,
 		LastVisit:    getCurrentTime(),
 		MobileKey:    authReq.MobileKey,
 	}

@@ -20,16 +20,30 @@ func (is *InvalidSession) GetStatusCode() int {
 	return is.Code
 }
 
-type TokenExpired struct {
+type InvalidToken struct {
 	Message string `json:"message"`
 	Code    int    `json:"code"`
 	Desc    string `json:"desc"`
 }
 
-func (is *TokenExpired) PrintLog() {
+func (is *InvalidToken) PrintLog() {
 	log.Info(is.Message)
 }
 
-func (is *TokenExpired) GetStatusCode() int {
+func (is *InvalidToken) GetStatusCode() int {
 	return is.Code
+}
+
+type RefreshSessionErrorResponse struct {
+	Message string `json:"message"`
+	Code    int    `json:"code"`
+	Desc    string `json:"desc"`
+}
+
+func (rser *RefreshSessionErrorResponse) PrintLog() {
+	log.Info(rser.Message)
+}
+
+func (rser *RefreshSessionErrorResponse) GetStatusCode() int {
+	return rser.Code
 }
