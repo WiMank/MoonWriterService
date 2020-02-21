@@ -1,20 +1,19 @@
 package repository
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/WiMank/MoonWriterService/config"
 	"github.com/WiMank/MoonWriterService/domain"
 	"github.com/WiMank/MoonWriterService/interface/request"
 	"github.com/WiMank/MoonWriterService/interface/response"
+	"github.com/WiMank/MoonWriterService/interface/utils"
 	"github.com/dgrijalva/jwt-go"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
-	"time"
 )
 
 type refreshRepository struct {
@@ -73,8 +72,7 @@ func (rr *refreshRepository) findSession(request request.RefreshTokensRequest) (
 	}
 
 	var localSession domain.SessionEntity
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	findSessionErr := rr.collectionSessions.FindOne(ctx, bson.D{
+	findSessionErr := rr.collectionSessions.FindOne(utils.GetContext(), bson.D{
 		{"_id", id},
 		{"mobile_key", request.Refresh.MobileKey},
 		{"refresh_token", request.Refresh.RefreshToken},
@@ -106,7 +104,7 @@ func (rr *refreshRepository) validateToken(refreshToken string) bool {
 }
 
 func (rr *refreshRepository) createAccessToken(entity *domain.SessionEntity) (string, error) {
-	tokenTime := getCurrentTime() + 36e2
+	tokenTime := utils.GetAccessTokenTime()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"iss":  "Moon Writer",
 		"user": entity.UserId,
@@ -122,7 +120,7 @@ func (rr *refreshRepository) createAccessToken(entity *domain.SessionEntity) (st
 }
 
 func (rr *refreshRepository) createRefreshToken(entity *domain.SessionEntity) (string, error) {
-	tokenTime := getCurrentTime() + 2592e3
+	tokenTime := utils.GetRefreshTokenTime()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"iss":  "Moon Writer",
 		"user": entity.UserId,
@@ -141,8 +139,8 @@ func (rr *refreshRepository) refreshSession(access string, refresh string, entit
 	if errHex != nil {
 		return errHex
 	}
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	_, errUpdate := rr.collectionSessions.UpdateOne(ctx,
+	_, errUpdate := rr.collectionSessions.UpdateOne(
+		utils.GetContext(),
 		bson.D{
 			{"_id", id},
 			{"refresh_token", entity.RefreshToken},
@@ -152,7 +150,7 @@ func (rr *refreshRepository) refreshSession(access string, refresh string, entit
 			"$set", bson.D{
 				{"access_token", access},
 				{"refresh_token", refresh},
-				{"last_visit", getCurrentTime()},
+				{"last_visit", utils.GetCurrentTime()},
 			}}})
 
 	if errUpdate != nil {
