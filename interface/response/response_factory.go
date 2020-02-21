@@ -22,24 +22,24 @@ func NewAppResponseCreator() AppResponseCreator {
 	return &concreteAppResponseCreator{}
 }
 
-func (c *concreteAppResponseCreator) CreateResponse(i interface{}, userName string) AppResponse {
+func (c *concreteAppResponseCreator) CreateResponse(i interface{}, data string) AppResponse {
 	var appResponse AppResponse
 	switch t := i.(type) {
 	case UnauthorizedResponse:
 		appResponse = &UnauthorizedResponse{
-			Message: fmt.Sprintf("User [%s] unauthorized", userName),
+			Message: fmt.Sprintf("User [%s] unauthorized", data),
 			Code:    http.StatusUnauthorized,
 			Desc:    http.StatusText(http.StatusUnauthorized),
 		}
 	case UserCreatedResponse:
 		appResponse = &UserCreatedResponse{
-			Message: fmt.Sprintf("User [%s] registration success!", userName),
+			Message: fmt.Sprintf("User [%s] registration success!", data),
 			Code:    http.StatusCreated,
 			Desc:    http.StatusText(http.StatusCreated),
 		}
 	case UserExistResponse:
 		appResponse = &UserExistResponse{
-			Message: fmt.Sprintf("User with the name [%s] is already registered", userName),
+			Message: fmt.Sprintf("User with the name [%s] is already registered", data),
 			Code:    http.StatusBadRequest,
 			Desc:    http.StatusText(http.StatusBadRequest),
 		}
@@ -51,7 +51,7 @@ func (c *concreteAppResponseCreator) CreateResponse(i interface{}, userName stri
 		}
 	case UserFindResponse:
 		appResponse = &UserFindResponse{
-			Message: fmt.Sprintf("User [%s] not found", userName),
+			Message: fmt.Sprintf("User [%s] not found", data),
 			Code:    http.StatusBadRequest,
 			Desc:    http.StatusText(http.StatusBadRequest),
 		}
@@ -66,31 +66,31 @@ func (c *concreteAppResponseCreator) CreateResponse(i interface{}, userName stri
 		}
 	case TokenErrorResponse:
 		appResponse = &TokenErrorResponse{
-			Message: fmt.Sprintf("Token creation error for user [%s]", userName),
+			Message: fmt.Sprintf("Token creation error for user [%s]", data),
 			Code:    http.StatusInternalServerError,
 			Desc:    http.StatusText(http.StatusInternalServerError),
 		}
 	case SessionUpdateFailedResponse:
 		appResponse = &TokenErrorResponse{
-			Message: fmt.Sprintf("Error updating session for user [%s]", userName),
+			Message: fmt.Sprintf("Error updating session for user [%s]", data),
 			Code:    http.StatusInternalServerError,
 			Desc:    http.StatusText(http.StatusInternalServerError),
 		}
 	case SessionInsertFailedResponse:
 		appResponse = &TokenErrorResponse{
-			Message: fmt.Sprintf("Session insert error for user [%s]", userName),
+			Message: fmt.Sprintf("Session insert error for user [%s]", data),
 			Code:    http.StatusInternalServerError,
 			Desc:    http.StatusText(http.StatusInternalServerError),
 		}
 	case InvalidSession:
 		appResponse = &TokenErrorResponse{
-			Message: fmt.Sprintf("INVALID SESSION [%s]", userName),
+			Message: fmt.Sprintf("INVALID SESSION [%s]", data),
 			Code:    http.StatusBadRequest,
 			Desc:    http.StatusText(http.StatusBadRequest),
 		}
 	case InvalidToken:
 		appResponse = &TokenErrorResponse{
-			Message: fmt.Sprintf("INVALID TOKEN"),
+			Message: fmt.Sprintf("INVALID TOKEN [%s]", data),
 			Code:    http.StatusBadRequest,
 			Desc:    http.StatusText(http.StatusBadRequest),
 		}

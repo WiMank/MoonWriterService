@@ -62,7 +62,8 @@ func (rr *refreshRepository) Refresh(request request.RefreshTokensRequest) respo
 			RefreshToken: refresh,
 			AccessToken:  access}, "")
 	}
-	return rr.responseCreator.CreateResponse(response.InvalidToken{}, localSession.UserName)
+
+	return rr.responseCreator.CreateResponse(response.InvalidToken{}, localSession.Id)
 }
 
 func (rr *refreshRepository) findSession(request request.RefreshTokensRequest) (*domain.SessionEntity, error) {
@@ -92,14 +93,14 @@ func (rr *refreshRepository) validateToken(refreshToken string) bool {
 		return []byte(config.SecretKey), nil
 	})
 
-	if token != nil {
-		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			fmt.Println(claims["iss"], claims["user"], claims["exp"])
-			return true
-		} else {
-			fmt.Println(err)
-		}
+	if err != nil {
+		return false
 	}
+
+	if token != nil && token.Valid {
+		return true
+	}
+
 	return false
 }
 
