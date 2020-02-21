@@ -13,7 +13,7 @@ type RefreshController interface {
 	RefreshTokens() response.AppResponse
 }
 
-func NewRefreshController(interactor usecase.RefreshInteractor) usecase.RefreshInteractor {
+func NewRefreshController(interactor usecase.RefreshInteractor) RefreshController {
 	return &refreshController{interactor}
 }
 

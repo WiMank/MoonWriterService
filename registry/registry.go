@@ -18,5 +18,9 @@ func NewRegistry(db *mongo.Database) Registry {
 }
 
 func (r *registry) NewAppController() controller.AppController {
-	return controller.NewAppController(r.CreateUserController(), r.CreateAuthController())
+	return controller.NewAppController(
+		r.CreateUserController(),
+		r.CreateAuthController(),
+		r.CreateRefreshController(),
+	)
 }

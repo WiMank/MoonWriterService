@@ -3,6 +3,7 @@ package controller
 type appController struct {
 	uc UserController
 	ac AuthController
+	rc RefreshController
 }
 
 type AppController interface {
@@ -10,8 +11,8 @@ type AppController interface {
 	GetAuthController() AuthController
 }
 
-func NewAppController(uc UserController, ac AuthController) AppController {
-	return &appController{uc, ac}
+func NewAppController(uc UserController, ac AuthController, rc RefreshController) AppController {
+	return &appController{uc, ac, rc}
 }
 
 func (a appController) GetUserController() UserController {

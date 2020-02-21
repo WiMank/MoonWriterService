@@ -17,7 +17,7 @@ type RefreshRepository interface {
 	Refresh() response.AppResponse
 }
 
-func NewRefreshRepository(collectionUsers *mongo.Collection, collectionSessions *mongo.Collection, responseCreator response.AppResponseCreator) RefreshRepository {
+func NewRefreshRepository(collectionSessions *mongo.Collection, responseCreator response.AppResponseCreator) RefreshRepository {
 	return &refreshRepository{collectionSessions, responseCreator}
 }
 
