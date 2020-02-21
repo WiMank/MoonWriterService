@@ -10,6 +10,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 	"time"
@@ -61,24 +62,32 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 			if updateErr != nil {
 				ar.responseCreator.CreateResponse(response.SessionUpdateFailedResponse{}, authReq.User.UserName)
 			}
+			return ar.responseCreator.CreateResponse(
+				response.UpdateTokenResponse{
+					AccessToken:  access.Tok,
+					RefreshToken: refresh.Tok,
+					ExpiresInA:   access.Expired,
+					ExpiresInR:   refresh.Expired,
+				},
+				authReq.User.UserName,
+			)
 		} else {
-			insertErr := ar.insertSession(access, refresh, authReq, localUserEntity)
+			insertResult, insertErr := ar.insertSession(access, refresh, authReq, localUserEntity)
 			if insertErr != nil {
 				ar.responseCreator.CreateResponse(response.SessionInsertFailedResponse{}, authReq.User.UserName)
 			}
+			return ar.responseCreator.CreateResponse(
+				response.InsertTokenResponse{
+					SessionId:    insertResult,
+					AccessToken:  access.Tok,
+					RefreshToken: refresh.Tok,
+					ExpiresInA:   access.Expired,
+					ExpiresInR:   refresh.Expired,
+				},
+				authReq.User.UserName,
+			)
 		}
-
-		return ar.responseCreator.CreateResponse(
-			response.TokenResponse{
-				AccessToken:  access.Tok,
-				RefreshToken: refresh.Tok,
-				ExpiresInA:   access.Expired,
-				ExpiresInR:   refresh.Expired,
-			},
-			authReq.User.UserName,
-		)
 	}
-
 	return ar.responseCreator.CreateResponse(response.UnauthorizedResponse{}, authReq.User.UserName)
 }
 
@@ -161,13 +170,13 @@ func createRefreshToken(entity *domain.UserEntity) (*domain.Token, error) {
 	}, nil
 }
 
-func (ar *authRepository) insertSession(access *domain.Token, refresh *domain.Token, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) error {
+func (ar *authRepository) insertSession(access *domain.Token, refresh *domain.Token, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) (string, error) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	_, errInsert := ar.collectionSessions.InsertOne(ctx, createSession(access, refresh, authReq, entity))
+	insertResult, errInsert := ar.collectionSessions.InsertOne(ctx, createSession(access, refresh, authReq, entity))
 	if errInsert != nil {
-		return errInsert
+		return "", errInsert
 	}
-	return nil
+	return insertResult.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
 func (ar *authRepository) updateSession(access *domain.Token, refresh *domain.Token, entity *domain.UserEntity, authReq request.AuthenticateUserRequest) error {

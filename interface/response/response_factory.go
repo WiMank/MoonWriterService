@@ -55,9 +55,20 @@ func (c *concreteAppResponseCreator) CreateResponse(i interface{}, userName stri
 			Code:    http.StatusBadRequest,
 			Desc:    http.StatusText(http.StatusBadRequest),
 		}
-	case TokenResponse:
-		appResponse = &TokenResponse{
+	case InsertTokenResponse:
+		appResponse = &InsertTokenResponse{
 			Message:      fmt.Sprintf("Tokens created for [%s]", userName),
+			Code:         http.StatusOK,
+			Desc:         http.StatusText(http.StatusOK),
+			SessionId:    t.SessionId,
+			RefreshToken: t.RefreshToken,
+			ExpiresInR:   t.ExpiresInR,
+			AccessToken:  t.AccessToken,
+			ExpiresInA:   t.ExpiresInA,
+		}
+	case UpdateTokenResponse:
+		appResponse = &UpdateTokenResponse{
+			Message:      fmt.Sprintf("Tokens updated for [%s]", userName),
 			Code:         http.StatusOK,
 			Desc:         http.StatusText(http.StatusOK),
 			RefreshToken: t.RefreshToken,

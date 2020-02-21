@@ -8,7 +8,26 @@ type SessionResponse struct {
 	AppResponse AppResponse `json:"auth_response"`
 }
 
-type TokenResponse struct {
+type InsertTokenResponse struct {
+	Message      string `json:"message"`
+	Code         int    `json:"code"`
+	Desc         string `json:"desc"`
+	SessionId    string `json:"session_id"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresInR   int64  `json:"expires_in_r"`
+	AccessToken  string `json:"access_token"`
+	ExpiresInA   int64  `json:"expires_in_a"`
+}
+
+func (tr *InsertTokenResponse) PrintLog() {
+	log.Info(tr.Message)
+}
+
+func (tr *InsertTokenResponse) GetStatusCode() int {
+	return tr.Code
+}
+
+type UpdateTokenResponse struct {
 	Message      string `json:"message"`
 	Code         int    `json:"code"`
 	Desc         string `json:"desc"`
@@ -18,11 +37,11 @@ type TokenResponse struct {
 	ExpiresInA   int64  `json:"expires_in_a"`
 }
 
-func (tr *TokenResponse) PrintLog() {
+func (tr *UpdateTokenResponse) PrintLog() {
 	log.Info(tr.Message)
 }
 
-func (tr *TokenResponse) GetStatusCode() int {
+func (tr *UpdateTokenResponse) GetStatusCode() int {
 	return tr.Code
 }
 
