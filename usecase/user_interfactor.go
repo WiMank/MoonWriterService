@@ -7,20 +7,20 @@ import (
 )
 
 type userInteractor struct {
-	repository repository.UserRepository
-	presenter  presenter.UserPresenter
+	repository repository.RegistrationRepository
+	presenter  presenter.RegistrationPresenter
 }
 
 type UserInteractor interface {
 	Insert(w http.ResponseWriter, r *http.Request)
 }
 
-func NewUserInteractor(repository repository.UserRepository, presenter presenter.UserPresenter) UserInteractor {
+func NewUserInteractor(repository repository.RegistrationRepository, presenter presenter.RegistrationPresenter) UserInteractor {
 	return &userInteractor{repository, presenter}
 }
 
 func (ui *userInteractor) Insert(w http.ResponseWriter, r *http.Request) {
 	decodeResult := ui.repository.DecodeRequest(r)
 	insertResponse := ui.repository.InsertUser(decodeResult)
-	ui.presenter.UserResponse(w, insertResponse)
+	ui.presenter.RegistrationResponse(w, insertResponse)
 }

@@ -14,21 +14,21 @@ import (
 	"time"
 )
 
-type userRepository struct {
+type registrationRepository struct {
 	collection      *mongo.Collection
 	responseCreator response.AppResponseCreator
 }
 
-type UserRepository interface {
+type RegistrationRepository interface {
 	DecodeRequest(r *http.Request) request.UserRegistrationRequest
 	InsertUser(request request.UserRegistrationRequest) response.AppResponse
 }
 
-func NewUserRepository(collection *mongo.Collection, responseCreator response.AppResponseCreator) UserRepository {
-	return &userRepository{collection, responseCreator}
+func NewUserRepository(collection *mongo.Collection, responseCreator response.AppResponseCreator) RegistrationRepository {
+	return &registrationRepository{collection, responseCreator}
 }
 
-func (ur *userRepository) DecodeRequest(r *http.Request) request.UserRegistrationRequest {
+func (ur *registrationRepository) DecodeRequest(r *http.Request) request.UserRegistrationRequest {
 	var requestUser request.UserRegistrationRequest
 	if err := json.NewDecoder(r.Body).Decode(&requestUser); err != nil {
 		log.Error("Decode User response error! ", err)
@@ -36,7 +36,7 @@ func (ur *userRepository) DecodeRequest(r *http.Request) request.UserRegistratio
 	return requestUser
 }
 
-func (ur *userRepository) InsertUser(request request.UserRegistrationRequest) response.AppResponse {
+func (ur *registrationRepository) InsertUser(request request.UserRegistrationRequest) response.AppResponse {
 	var localUserEntity domain.UserEntity
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 

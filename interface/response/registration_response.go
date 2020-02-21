@@ -3,7 +3,7 @@ package response
 import log "github.com/sirupsen/logrus"
 
 type UserResponse struct {
-	AppResponse AppResponse `json:"user_response"`
+	AppResponse AppResponse `json:"registration_response"`
 }
 
 type UserCreatedResponse struct {

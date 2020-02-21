@@ -10,18 +10,18 @@ import (
 type userPresenter struct {
 }
 
-type UserPresenter interface {
-	UserResponse(w http.ResponseWriter, appResponse response.AppResponse)
+type RegistrationPresenter interface {
+	RegistrationResponse(w http.ResponseWriter, appResponse response.AppResponse)
 }
 
-func NewUserPresenter() UserPresenter {
+func NewRegistrationPresenter() RegistrationPresenter {
 	return &userPresenter{}
 }
 
-func (up *userPresenter) UserResponse(w http.ResponseWriter, appResponse response.AppResponse) {
+func (up *userPresenter) RegistrationResponse(w http.ResponseWriter, appResponse response.AppResponse) {
 	w.WriteHeader(appResponse.GetStatusCode())
 	err := json.NewEncoder(w).Encode(response.UserResponse{AppResponse: appResponse})
 	if err != nil {
-		log.Errorf("UserResponse encode error:\n", err)
+		log.Errorf("RegistrationResponse encode error:\n", err)
 	}
 }

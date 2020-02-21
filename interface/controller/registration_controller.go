@@ -11,14 +11,14 @@ type userController struct {
 }
 
 type UserController interface {
-	PostUser(w http.ResponseWriter, r *http.Request)
+	RegistrationUser(w http.ResponseWriter, r *http.Request)
 }
 
 func NewUserController(interactor usecase.UserInteractor) UserController {
 	return &userController{interactor}
 }
 
-func (uc *userController) PostUser(w http.ResponseWriter, r *http.Request) {
+func (uc *userController) RegistrationUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(config.ContentTypeHeader, config.ApplicationJsonType)
 	uc.interactor.Insert(w, r)
 }
