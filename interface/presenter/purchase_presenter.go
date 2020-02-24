@@ -12,8 +12,8 @@ type PurchasePresenter interface {
 	PurchaseResponse(w http.ResponseWriter, appResponse response.AppResponse)
 }
 
-func NewPurchasePresenter() purchasePresenter {
-	return purchasePresenter{}
+func NewPurchasePresenter() PurchasePresenter {
+	return &purchasePresenter{}
 }
 
 func (pp *purchasePresenter) PurchaseResponse(w http.ResponseWriter, appResponse response.AppResponse) {

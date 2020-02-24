@@ -6,14 +6,14 @@ import (
 )
 
 type purchaseController struct {
-	interactor usecase.AuthInteractor
+	interactor usecase.PurchaseInteractor
 }
 
 type PurchaseController interface {
 	Purchase(w http.ResponseWriter, r *http.Request)
 }
 
-func NewPurchaseController(interactor usecase.AuthInteractor) PurchaseController {
+func NewPurchaseController(interactor usecase.PurchaseInteractor) PurchaseController {
 	return &purchaseController{interactor}
 }
 

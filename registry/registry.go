@@ -22,5 +22,6 @@ func (r *registry) NewAppController() controller.AppController {
 		r.CreateUserController(),
 		r.CreateAuthController(),
 		r.CreateRefreshController(),
+		r.CreatePurchaseController(),
 	)
 }
