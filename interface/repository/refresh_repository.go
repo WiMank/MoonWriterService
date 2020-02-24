@@ -59,8 +59,9 @@ func (rr *refreshRepository) Refresh(request request.RefreshTokensRequest) respo
 		return rr.responseCreator.CreateResponse(response.TokenResponse{
 			Message:      fmt.Sprintf("Tokens refreshed for [%s]", localSession.UserName),
 			SessionId:    localSession.Id,
+			AccessToken:  access,
 			RefreshToken: refresh,
-			AccessToken:  access}, "")
+		}, "")
 	}
 
 	return rr.responseCreator.CreateResponse(response.InvalidToken{}, localSession.Id)

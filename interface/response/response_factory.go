@@ -100,6 +100,18 @@ func (c *concreteAppResponseCreator) CreateResponse(i interface{}, data string) 
 			Code:    http.StatusInternalServerError,
 			Desc:    http.StatusText(http.StatusInternalServerError),
 		}
+	case RegisterPurchaseResponse:
+		appResponse = &RegisterPurchaseResponse{
+			Message: fmt.Sprintf("Upgrade to the pro version was successful!"),
+			Code:    http.StatusCreated,
+			Desc:    http.StatusText(http.StatusCreated),
+		}
+	case RegisterPurchaseErrorResponse:
+		appResponse = &RegisterPurchaseResponse{
+			Message: fmt.Sprintf("Error updating to pro version [%s]", data),
+			Code:    http.StatusInternalServerError,
+			Desc:    http.StatusText(http.StatusInternalServerError),
+		}
 	default:
 		log.Fatal("Unknown Response")
 	}

@@ -52,7 +52,8 @@ func (ur *registrationRepository) InsertUser(request request.UserRegistrationReq
 	if _, err := ur.collection.InsertOne(ctx, bson.D{
 		{"user_name", request.User.UserName},
 		{"user_pass", request.User.UserPass},
-		{"user_role", "free"},
+		{"user_role", "user"},
+		{"user_type", "free"},
 	}); err != nil {
 		return ur.responseCreator.CreateResponse(response.UserInsertErrorResponse{}, request.User.UserName)
 	}

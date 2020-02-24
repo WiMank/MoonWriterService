@@ -5,6 +5,7 @@ type UserEntity struct {
 	UserName string `bson:"user_name" json:"user_name"`
 	UserPass string `bson:"user_pass" json:"user_pass"`
 	UserRole string `bson:"user_role" json:"-"`
+	UserType string `bson:"user_type" json:"-"`
 }
 
 func (ue *UserEntity) CheckUserExist(newUser UserEntity) bool {

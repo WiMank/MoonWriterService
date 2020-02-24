@@ -13,8 +13,8 @@ type TokenResponse struct {
 	Code         int    `json:"code"`
 	Desc         string `json:"desc"`
 	SessionId    string `json:"session_id"`
-	RefreshToken string `json:"refresh_token"`
 	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 func (tr *TokenResponse) PrintLog() {
