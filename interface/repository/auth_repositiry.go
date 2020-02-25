@@ -86,7 +86,7 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 
 func (ar *authRepository) findUserEntity(authReq request.AuthenticateUserRequest) (*domain.UserEntity, error) {
 	var localUserEntity domain.UserEntity
-	userBson := bson.M{"user_name": authReq.User.UserName}
+	userBson := bson.D{{"user_name", authReq.User.UserName}, {"user_pass", authReq.User.UserPass}}
 	if errFind := ar.collectionUsers.FindOne(utils.GetContext(), userBson).Decode(&localUserEntity); errFind != nil {
 		return nil, errFind
 	}

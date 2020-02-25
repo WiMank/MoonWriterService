@@ -7,3 +7,8 @@ type PurchaseRegisterRequest struct {
 	PurchaseTime  int64  `json:"purchase_time"`
 	Sku           string `json:"sku"`
 }
+
+type PurchaseVerificationRequest struct {
+	AccessToken string `json:"access_token"`
+	Sku         string `json:"sku"`
+}

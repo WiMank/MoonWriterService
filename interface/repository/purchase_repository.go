@@ -28,9 +28,10 @@ type purchaseRepository struct {
 }
 
 type PurchaseRepository interface {
-	DecodeRequest(r *http.Request) request.PurchaseRegisterRequest
+	DecodePurchaseRegisterRequest(r *http.Request) request.PurchaseRegisterRequest
+	DecodeVerificationRequest(r *http.Request) request.PurchaseVerificationRequest
 	RegisterPurchase(request request.PurchaseRegisterRequest) response.AppResponse
-	VerificationPurchase(request request.PurchaseRegisterRequest) response.AppResponse
+	VerificationPurchase(request request.PurchaseVerificationRequest) response.AppResponse
 }
 
 func NewPurchaseRepository(
@@ -41,21 +42,30 @@ func NewPurchaseRepository(
 	return &purchaseRepository{collectionUsers, collectionSessions, collectionPurchase, responseCreator}
 }
 
-func (pr *purchaseRepository) DecodeRequest(r *http.Request) request.PurchaseRegisterRequest {
-	var refreshTokensRequest request.PurchaseRegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&refreshTokensRequest); err != nil {
-		log.Errorf("Decode VerificationPurchase error:\n", err)
+func (pr *purchaseRepository) DecodePurchaseRegisterRequest(r *http.Request) request.PurchaseRegisterRequest {
+	var purchaseRegisterRequest request.PurchaseRegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&purchaseRegisterRequest); err != nil {
+		log.Errorf("DecodePurchaseRegisterRequest error:\n", err)
 	}
-	return refreshTokensRequest
+	return purchaseRegisterRequest
+}
+
+func (pr *purchaseRepository) DecodeVerificationRequest(r *http.Request) request.PurchaseVerificationRequest {
+	var purchaseVerificationRequest request.PurchaseVerificationRequest
+	if err := json.NewDecoder(r.Body).Decode(&purchaseVerificationRequest); err != nil {
+		log.Errorf("DecodeVerificationRequest error:\n", err)
+	}
+	return purchaseVerificationRequest
 }
 
 func (pr *purchaseRepository) RegisterPurchase(request request.PurchaseRegisterRequest) response.AppResponse {
 	accessTokenExist := pr.checkAccessTokenExist(request.AccessToken)
 	userId, isValid := pr.validateAccessToken(request.AccessToken)
+	_, isExist := pr.checkUserExist(userId)
 	if accessTokenExist {
 		if isValid {
-			if pr.CheckUserExist(userId) {
-				if pr.CheckPurchaseTokenExist(request.PurchaseToken) {
+			if isExist {
+				if pr.checkTokenNonExist(request.PurchaseToken) {
 					if pr.insertPurchase(userId, request) {
 						return pr.responseCreator.CreateResponse(response.RegisterPurchaseResponse{}, userId)
 					}
@@ -74,23 +84,24 @@ func (pr *purchaseRepository) RegisterPurchase(request request.PurchaseRegisterR
 	return pr.responseCreator.CreateResponse(response.RegisterPurchaseErrorResponse{}, userId)
 }
 
-func (pr *purchaseRepository) VerificationPurchase(request request.PurchaseRegisterRequest) response.AppResponse {
-	ctx := context.Background()
-	str1 := "E:\\Dev\\GoDev\\MoonWriterService\\credentials.json"
-	androidpublisherService, err := androidpublisher.NewService(ctx, option.WithCredentialsFile(str1))
-	if err != nil {
-		log.Infof("VerificationPurchase NewService: ", err)
+func (pr *purchaseRepository) VerificationPurchase(request request.PurchaseVerificationRequest) response.AppResponse {
+	accessTokenExist := pr.checkAccessTokenExist(request.AccessToken)
+	userId, isValid := pr.validateAccessToken(request.AccessToken)
+	localUser, userExist := pr.checkUserExist(userId)
+	localPurchase, purchaseExist := pr.checkPurchaseExist(localUser)
+	if accessTokenExist {
+		if isValid {
+			if userExist {
+				if purchaseExist {
+					if pr.checkPaymentData(localPurchase) {
+
+					}
+				}
+			}
+		}
 	}
 
-	r, errr := androidpublisherService.Purchases.Products.Get("com.mwriter.moonwriter",
-		"lemonade35",
-		"bgeddnkemanoelbedjokoocc.AO-J1Owsddv6PUW4Ct4TWhiPqs0HgiL0wIBIjZgoWWaKPF9_nbti33qJQcSMzZFcBhrM-Lu7WJORZZr4m3C6iZ_wLuGyFLFp6UDTWR9syP27IAGq0lNo5NHtgNgtIXXTRISSW2g275ig").Do()
-	if errr != nil {
-		log.Infof("VerificationPurchase Get: ", errr)
-	}
-	log.Infof("VerificationPurchase Result: ", r)
-
-	return nil
+	return pr.responseCreator.CreateResponse(response.RegisterPurchaseResponse{}, "userId")
 }
 
 func (pr *purchaseRepository) validateAccessToken(accessToken string) (string, bool) {
@@ -112,49 +123,50 @@ func (pr *purchaseRepository) validateAccessToken(accessToken string) (string, b
 	return "", false
 }
 
-func (pr *purchaseRepository) CheckUserExist(userId string) bool {
+func (pr *purchaseRepository) checkUserExist(userId string) (*domain.UserEntity, bool) {
 	id, errHex := primitive.ObjectIDFromHex(userId)
 	if errHex != nil {
-		return false
+		return nil, false
 	}
 
 	var localUser domain.UserEntity
 	err := pr.collectionUsers.FindOne(utils.GetContext(), bson.D{{"_id", id}}).Decode(&localUser)
 	if err != nil {
 		log.Error("Count: ", err)
-		return false
+		return nil, false
 	}
 
-	if (localUser.Id == userId) && (localUser.UserType != config.PREMIUM) {
-		return true
+	if (localUser.Id == userId) && (!localUser.IsPremiumUser) {
+		return nil, true
 	}
 
-	return false
+	return &localUser, false
 }
 
-func (pr *purchaseRepository) CheckPurchaseTokenExist(purchaseToken string) bool {
+func (pr *purchaseRepository) checkTokenNonExist(purchaseToken string) bool {
 	count, err := pr.collectionPurchase.CountDocuments(utils.GetContext(), bson.D{{"purchase_token", purchaseToken}})
 	if err != nil {
 		return false
 	}
 
 	if count == 1 {
-		return true
+		return false
 	}
 
-	return false
+	return true
 }
 
 func (pr *purchaseRepository) checkAccessTokenExist(accessToken string) bool {
 	count, err := pr.collectionSessions.CountDocuments(utils.GetContext(), bson.D{{"access_token", accessToken}})
 	if err != nil {
-		return false
+		log.Error("CheckAccessTokenExist error: ", err)
 	}
 
 	if count == 1 {
 		return true
 	}
 
+	pr.responseCreator.CreateResponse(response.InvalidToken{}, "")
 	return false
 }
 
@@ -181,10 +193,48 @@ func (pr *purchaseRepository) insertPurchase(userId string, request request.Purc
 	_, errUpdate := pr.collectionUsers.UpdateOne(
 		utils.GetContext(),
 		bson.D{{"_id", id}},
-		bson.D{{"$set", bson.D{{"user_type", config.PREMIUM}}}})
+		bson.D{{"$set", bson.D{{"is_premium_user", true}}}})
 	if errUpdate != nil {
 		return false
 	}
 
 	return true
+}
+
+func (pr *purchaseRepository) checkPurchaseExist(user *domain.UserEntity) (*domain.Purchase, bool) {
+	id, errHex := primitive.ObjectIDFromHex(user.Id)
+	if errHex != nil {
+		return nil, false
+	}
+
+	var localPurchase domain.Purchase
+	errFind := pr.collectionUsers.FindOne(utils.GetContext(), bson.D{{"_id", id}}).Decode(&localPurchase)
+	if errFind != nil {
+		return nil, false
+	}
+
+	return &localPurchase, true
+}
+
+func (pr *purchaseRepository) checkPaymentData(purchase *domain.Purchase) bool {
+	androidPublisherService, serviceErr := androidpublisher.NewService(context.Background(), option.WithCredentialsFile("E:\\Dev\\GoDev\\MoonWriterService\\credentials.json"))
+	if serviceErr != nil {
+		log.Infof("CheckPaymentData NewService Error: ", serviceErr)
+		return false
+	}
+
+	r, getErr := androidPublisherService.Purchases.Products.Get(
+		config.APP_PACKAGE,
+		purchase.Sku,
+		purchase.PurchaseToken).Do()
+	if getErr != nil {
+		log.Infof("CheckPaymentData Products Get: ", getErr)
+		return false
+	}
+
+	if r.HTTPStatusCode == http.StatusOK {
+		return true
+	}
+
+	return false
 }

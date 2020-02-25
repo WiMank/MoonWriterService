@@ -107,7 +107,7 @@ func (c *concreteAppResponseCreator) CreateResponse(i interface{}, data string) 
 			Desc:    http.StatusText(http.StatusCreated),
 		}
 	case RegisterPurchaseErrorResponse:
-		appResponse = &RegisterPurchaseResponse{
+		appResponse = &RegisterPurchaseErrorResponse{
 			Message: fmt.Sprintf("Error updating to pro version [%s]", data),
 			Code:    http.StatusInternalServerError,
 			Desc:    http.StatusText(http.StatusInternalServerError),

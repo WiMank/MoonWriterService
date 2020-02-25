@@ -53,7 +53,7 @@ func (ur *registrationRepository) InsertUser(request request.UserRegistrationReq
 		{"user_name", request.User.UserName},
 		{"user_pass", request.User.UserPass},
 		{"user_role", "user"},
-		{"user_type", "free"},
+		{"is_premium_user", false},
 	}); err != nil {
 		return ur.responseCreator.CreateResponse(response.UserInsertErrorResponse{}, request.User.UserName)
 	}

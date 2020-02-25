@@ -21,13 +21,13 @@ func NewPurchaseInteractor(repository repository.PurchaseRepository, presenter p
 }
 
 func (pi *purchaseInteractor) InsertPurchase(w http.ResponseWriter, r *http.Request) {
-	decodeResult := pi.repository.DecodeRequest(r)
+	decodeResult := pi.repository.DecodePurchaseRegisterRequest(r)
 	registerPurchase := pi.repository.RegisterPurchase(decodeResult)
 	pi.presenter.PurchaseResponse(w, registerPurchase)
 }
 
 func (pi *purchaseInteractor) CheckPurchase(w http.ResponseWriter, r *http.Request) {
-	decodeResult := pi.repository.DecodeRequest(r)
+	decodeResult := pi.repository.DecodeVerificationRequest(r)
 	purchaseVerification := pi.repository.VerificationPurchase(decodeResult)
 	pi.presenter.PurchaseResponse(w, purchaseVerification)
 }
