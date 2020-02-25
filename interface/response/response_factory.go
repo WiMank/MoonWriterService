@@ -116,15 +116,44 @@ func (c *concreteAppResponseCreator) CreateResponse(i interface{}, data string) 
 	case PurchaseTokenExistResponse:
 		appResponse = &PurchaseTokenExistResponse{
 			Message: "A purchase has already been made in the past",
-			Code:    http.StatusInternalServerError,
-			Desc:    http.StatusText(http.StatusInternalServerError),
+			Code:    http.StatusBadRequest,
+			Desc:    http.StatusText(http.StatusBadRequest),
 		}
-
 	case PurchaseUserExistResponse:
-		appResponse = &UserFindResponse{
+		appResponse = &PurchaseUserExistResponse{
 			Message: fmt.Sprintf("User [%s] not found or already has premium status", data),
 			Code:    http.StatusBadRequest,
 			Desc:    http.StatusText(http.StatusBadRequest),
+		}
+	case PurchaseValidResponse:
+		appResponse = &PurchaseValidResponse{
+			Message: fmt.Sprintf("The purchase is valid [%s]", data),
+			Code:    http.StatusOK,
+			Desc:    http.StatusText(http.StatusOK),
+		}
+	case VerificationPurchaseErrorResponse:
+		appResponse = &VerificationPurchaseErrorResponse{
+			Message: fmt.Sprintf("Payment Verification Error [%s]", data),
+			Code:    http.StatusInternalServerError,
+			Desc:    http.StatusText(http.StatusInternalServerError),
+		}
+	case PurchaseNotFoundResponse:
+		appResponse = &PurchaseNotFoundResponse{
+			Message: fmt.Sprintf("Payment information not found [%s]", data),
+			Code:    http.StatusBadRequest,
+			Desc:    http.StatusText(http.StatusBadRequest),
+		}
+	case CheckPaymentDataErrorResponse:
+		appResponse = &CheckPaymentDataErrorResponse{
+			Message: fmt.Sprintf("Failed to contact payment verification server [%s]", data),
+			Code:    http.StatusInternalServerError,
+			Desc:    http.StatusText(http.StatusInternalServerError),
+		}
+	case InsertPurchaseErrorResponse:
+		appResponse = &InsertPurchaseErrorResponse{
+			Message: fmt.Sprintf("Failed to save purchase information. [%s]", data),
+			Code:    http.StatusInternalServerError,
+			Desc:    http.StatusText(http.StatusInternalServerError),
 		}
 	default:
 		log.Fatal("Unknown Response")
