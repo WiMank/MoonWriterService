@@ -96,13 +96,13 @@ func (c *concreteAppResponseCreator) CreateResponse(i interface{}, data string) 
 		}
 	case RefreshSessionErrorResponse:
 		appResponse = &TokenErrorResponse{
-			Message: fmt.Sprintf("Session Update Error"),
+			Message: "Session Update Error",
 			Code:    http.StatusInternalServerError,
 			Desc:    http.StatusText(http.StatusInternalServerError),
 		}
 	case RegisterPurchaseResponse:
 		appResponse = &RegisterPurchaseResponse{
-			Message: fmt.Sprintf("Upgrade to the pro version was successful!"),
+			Message: "Upgrade to the pro version was successful!",
 			Code:    http.StatusCreated,
 			Desc:    http.StatusText(http.StatusCreated),
 		}
@@ -111,6 +111,20 @@ func (c *concreteAppResponseCreator) CreateResponse(i interface{}, data string) 
 			Message: fmt.Sprintf("Error updating to pro version [%s]", data),
 			Code:    http.StatusInternalServerError,
 			Desc:    http.StatusText(http.StatusInternalServerError),
+		}
+
+	case PurchaseTokenExistResponse:
+		appResponse = &PurchaseTokenExistResponse{
+			Message: "A purchase has already been made in the past",
+			Code:    http.StatusInternalServerError,
+			Desc:    http.StatusText(http.StatusInternalServerError),
+		}
+
+	case PurchaseUserExistResponse:
+		appResponse = &UserFindResponse{
+			Message: fmt.Sprintf("User [%s] not found or already has premium status", data),
+			Code:    http.StatusBadRequest,
+			Desc:    http.StatusText(http.StatusBadRequest),
 		}
 	default:
 		log.Fatal("Unknown Response")

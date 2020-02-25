@@ -55,11 +55,21 @@ func (pr *purchaseRepository) RegisterPurchase(request request.PurchaseRegisterR
 	if accessTokenExist {
 		if isValid {
 			if pr.CheckUserExist(userId) {
-				if pr.insertPurchase(userId, request) {
-					return pr.responseCreator.CreateResponse(response.RegisterPurchaseResponse{}, userId)
+				if pr.CheckPurchaseTokenExist(request.PurchaseToken) {
+					if pr.insertPurchase(userId, request) {
+						return pr.responseCreator.CreateResponse(response.RegisterPurchaseResponse{}, userId)
+					}
+				} else {
+					return pr.responseCreator.CreateResponse(response.PurchaseTokenExistResponse{}, userId)
 				}
+			} else {
+				return pr.responseCreator.CreateResponse(response.PurchaseUserExistResponse{}, userId)
 			}
+		} else {
+			return pr.responseCreator.CreateResponse(response.InvalidToken{}, userId)
 		}
+	} else {
+		return pr.responseCreator.CreateResponse(response.InvalidToken{}, userId)
 	}
 	return pr.responseCreator.CreateResponse(response.RegisterPurchaseErrorResponse{}, userId)
 }
@@ -122,6 +132,19 @@ func (pr *purchaseRepository) CheckUserExist(userId string) bool {
 	return false
 }
 
+func (pr *purchaseRepository) CheckPurchaseTokenExist(purchaseToken string) bool {
+	count, err := pr.collectionPurchase.CountDocuments(utils.GetContext(), bson.D{{"purchase_token", purchaseToken}})
+	if err != nil {
+		return false
+	}
+
+	if count == 1 {
+		return true
+	}
+
+	return false
+}
+
 func (pr *purchaseRepository) checkAccessTokenExist(accessToken string) bool {
 	count, err := pr.collectionSessions.CountDocuments(utils.GetContext(), bson.D{{"access_token", accessToken}})
 	if err != nil {
@@ -142,11 +165,12 @@ func (pr *purchaseRepository) insertPurchase(userId string, request request.Purc
 		{"purchase_token", request.PurchaseToken},
 		{"order_id", request.OrderId},
 		{"purchase_time", request.PurchaseTime},
-		{"Sku", request.Sku},
+		{"sku", request.Sku},
 		{"access_token", request.AccessToken},
 	})
 
 	if err != nil {
+		log.Errorf("InsertOne: ", err)
 		return false
 	}
 

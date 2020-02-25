@@ -176,8 +176,8 @@ func (ar *authRepository) updateSession(access string, refresh string, entity *d
 	res := ar.collectionSessions.FindOneAndUpdate(
 		utils.GetContext(),
 		bson.D{
-			{"user_name", entity.UserName},
 			{"user_id", entity.Id},
+			{"user_name", entity.UserName},
 			{"mobile_key", authReq.MobileKey},
 		},
 		bson.D{{

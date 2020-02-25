@@ -47,3 +47,17 @@ func (rser *RefreshSessionErrorResponse) PrintLog() {
 func (rser *RefreshSessionErrorResponse) GetStatusCode() int {
 	return rser.Code
 }
+
+type PurchaseUserExistResponse struct {
+	Message string `json:"message"`
+	Code    int    `json:"code"`
+	Desc    string `json:"desc"`
+}
+
+func (puer *PurchaseUserExistResponse) PrintLog() {
+	log.Info(puer.Message)
+}
+
+func (puer *PurchaseUserExistResponse) GetStatusCode() int {
+	return puer.Code
+}

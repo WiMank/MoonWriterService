@@ -33,3 +33,17 @@ func (rper *RegisterPurchaseErrorResponse) PrintLog() {
 func (rper *RegisterPurchaseErrorResponse) GetStatusCode() int {
 	return rper.Code
 }
+
+type PurchaseTokenExistResponse struct {
+	Message string `json:"message"`
+	Code    int    `json:"code"`
+	Desc    string `json:"desc"`
+}
+
+func (pter *PurchaseTokenExistResponse) PrintLog() {
+	log.Info(pter.Message)
+}
+
+func (pter *PurchaseTokenExistResponse) GetStatusCode() int {
+	return pter.Code
+}
