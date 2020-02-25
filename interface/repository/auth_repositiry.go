@@ -58,7 +58,7 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 			return ar.responseCreator.CreateResponse(response.TokenErrorResponse{}, authReq.User.UserName)
 		}
 
-		if (session != nil) && (session.CheckMkExist(authReq.MobileKey)) {
+		if session.CheckMkExist(authReq.MobileKey) {
 			updateResult, updateErr := ar.updateSession(access, refresh, localUserEntity, authReq)
 			if updateErr != nil {
 				ar.responseCreator.CreateResponse(response.SessionUpdateFailedResponse{}, authReq.User.UserName)

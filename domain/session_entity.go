@@ -12,7 +12,7 @@ type SessionEntity struct {
 }
 
 func (se *SessionEntity) CheckMkExist(newMk string) bool {
-	if se.MobileKey == newMk {
+	if (se != nil) && (se.MobileKey == newMk) {
 		return true
 	} else {
 		return false
