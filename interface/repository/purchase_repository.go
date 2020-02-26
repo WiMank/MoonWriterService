@@ -107,12 +107,13 @@ func (pr *purchaseRepository) VerificationPurchase(request request.PurchaseVerif
 		userId, accessTokenValid := pr.validateAccessToken(request.Purchase.AccessToken)
 		localUser, userExist := pr.checkUserExist(userId)
 		localPurchase, purchaseExist := pr.checkPurchaseExist(localUser)
+		paymentExist := pr.checkPaymentData(localPurchase)
 
 		if accessTokenExist {
 			if accessTokenValid {
 				if userExist {
 					if purchaseExist {
-						if pr.checkPaymentData(localPurchase) {
+						if paymentExist {
 							return pr.responseCreator.CreateResponse(response.PurchaseValidResponse{}, userId)
 						} else {
 							return pr.responseCreator.CreateResponse(response.CheckPaymentDataErrorResponse{}, userId)

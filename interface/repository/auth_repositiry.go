@@ -2,7 +2,6 @@ package repository
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/WiMank/MoonWriterService/config"
 	"github.com/WiMank/MoonWriterService/domain"
@@ -44,78 +43,69 @@ func (ar *authRepository) DecodeRequest(r *http.Request) request.AuthenticateUse
 
 func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponse {
 	if authReq.ValidateRequest(ar.validator) {
-		localUserEntity, errFindUser := ar.findUserEntity(authReq)
 
-		if errFindUser != nil {
+		ar.checkSessionsCount(authReq)
+		localUserEntity, userExist := ar.findUserEntity(authReq)
+		passwordAndNameCorrect := localUserEntity.CheckUserNameAndPass(authReq.User)
+		sessionExist := ar.checkSessionExist(authReq.MobileKey)
+		accessToken, refreshTokenCreated := createAccessToken(localUserEntity)
+		refreshToken, accessTokenCreated := createRefreshToken(localUserEntity)
+
+		if userExist {
+			if passwordAndNameCorrect {
+				if refreshTokenCreated && accessTokenCreated {
+					if sessionExist {
+						updateResult, sessionUpdated := ar.updateSession(accessToken, refreshToken, localUserEntity, authReq)
+						if sessionUpdated {
+							return ar.createUpdateTokenResponse(localUserEntity, updateResult, accessToken, refreshToken)
+						} else {
+							return ar.responseCreator.CreateResponse(response.SessionUpdateFailedResponse{}, authReq.User.UserName)
+						}
+					} else {
+						insertResult, sessionInserted := ar.insertSession(accessToken, refreshToken, authReq, localUserEntity)
+						if sessionInserted {
+							return ar.createNewTokenResponse(localUserEntity, insertResult, accessToken, refreshToken)
+						} else {
+							return ar.responseCreator.CreateResponse(response.SessionInsertFailedResponse{}, authReq.User.UserName)
+						}
+					}
+				} else {
+					return ar.responseCreator.CreateResponse(response.TokenErrorResponse{}, authReq.User.UserName)
+				}
+			} else {
+				return ar.responseCreator.CreateResponse(response.UnauthorizedResponse{}, authReq.User.UserName)
+			}
+		} else {
 			return ar.responseCreator.CreateResponse(response.UserFindResponse{}, authReq.User.UserName)
 		}
-
-		session := ar.findSession(authReq.MobileKey)
-
-		if localUserEntity.CheckUserNameAndPass(authReq.User) {
-			ar.checkSessionsCount(authReq)
-			access, errAuthenticate := createAccessToken(localUserEntity)
-			refresh, errAuthenticate := createRefreshToken(localUserEntity)
-
-			if errAuthenticate != nil {
-
-				return ar.responseCreator.CreateResponse(response.TokenErrorResponse{}, authReq.User.UserName)
-			}
-			if session.CheckMkExist(authReq.MobileKey) {
-				updateResult, updateErr := ar.updateSession(access, refresh, localUserEntity, authReq)
-
-				if updateErr != nil {
-					ar.responseCreator.CreateResponse(response.SessionUpdateFailedResponse{}, authReq.User.UserName)
-				}
-
-				return ar.responseCreator.CreateResponse(response.TokenResponse{
-					Message:      fmt.Sprintf("Tokens updated for [%s]", localUserEntity.UserName),
-					SessionId:    updateResult,
-					AccessToken:  access,
-					RefreshToken: refresh}, authReq.User.UserName)
-
-			} else {
-
-				insertResult, insertErr := ar.insertSession(access, refresh, authReq, localUserEntity)
-				if insertErr != nil {
-					ar.responseCreator.CreateResponse(response.SessionInsertFailedResponse{}, authReq.User.UserName)
-				}
-
-				return ar.responseCreator.CreateResponse(response.TokenResponse{
-					Message:      fmt.Sprintf("Tokens created for [%s]", localUserEntity.UserName),
-					SessionId:    insertResult,
-					AccessToken:  access,
-					RefreshToken: refresh}, authReq.User.UserName)
-			}
-		}
-
-		return ar.responseCreator.CreateResponse(response.UnauthorizedResponse{}, authReq.User.UserName)
 	}
 
 	return ar.responseCreator.CreateResponse(response.ValidateErrorResponse{}, "")
 }
 
-func (ar *authRepository) findUserEntity(authReq request.AuthenticateUserRequest) (*domain.UserEntity, error) {
+func (ar *authRepository) findUserEntity(authReq request.AuthenticateUserRequest) (*domain.UserEntity, bool) {
 	var localUserEntity domain.UserEntity
 	userBson := bson.D{{"user_name", authReq.User.UserName}, {"user_pass", authReq.User.UserPass}}
 
 	if errFind := ar.collectionUsers.FindOne(utils.GetContext(), userBson).Decode(&localUserEntity); errFind != nil {
-		return nil, errFind
+		return nil, false
 	}
 
-	return &localUserEntity, nil
+	return &localUserEntity, true
 }
 
-func (ar *authRepository) findSession(mk string) *domain.SessionEntity {
-	var session domain.SessionEntity
-	errMk := ar.collectionSessions.FindOne(utils.GetContext(), bson.M{"mobile_key": mk}).Decode(&session)
+func (ar *authRepository) checkSessionExist(mk string) bool {
+	count, err := ar.collectionSessions.CountDocuments(utils.GetContext(), bson.M{"mobile_key": mk})
 
-	if errMk != nil {
-		log.Error("FindSession error: ", errMk)
-		return nil
+	if err != nil {
+		return false
 	}
 
-	return &session
+	if count != 1 {
+		return false
+	}
+
+	return true
 }
 
 func (ar *authRepository) checkSessionsCount(authReq request.AuthenticateUserRequest) {
@@ -135,7 +125,7 @@ func (ar *authRepository) clearSessions(userBson bson.M) {
 	result, errDelete := ar.collectionSessions.DeleteMany(utils.GetContext(), userBson)
 
 	if errDelete != nil {
-		log.Errorf("ClearSessions error:\n", errDelete)
+		log.Errorf("ClearSessions error: ", errDelete)
 	}
 
 	if result != nil {
@@ -143,42 +133,52 @@ func (ar *authRepository) clearSessions(userBson bson.M) {
 	}
 }
 
-func createAccessToken(entity *domain.UserEntity) (string, error) {
-	tokenTime := utils.GetAccessTokenTime()
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"iss":  "Moon Writer",
-		"user": entity.Id,
-		"role": entity.UserRole,
-		"exp":  tokenTime,
-	})
-	tokenString, err := token.SignedString([]byte(config.SecretKey))
+func createAccessToken(entity *domain.UserEntity) (string, bool) {
+	if entity != nil {
 
-	if err != nil {
-		log.Errorf("Access token signed error:\n", err)
-		return "", err
+		tokenTime := utils.GetAccessTokenTime()
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"iss":  "Moon Writer",
+			"user": entity.Id,
+			"role": entity.UserRole,
+			"exp":  tokenTime,
+		})
+		tokenString, err := token.SignedString([]byte(config.SecretKey))
+
+		if err != nil {
+			return "", false
+		}
+
+		return tokenString, true
+
+	} else {
+		return "", false
 	}
-
-	return tokenString, nil
 }
 
-func createRefreshToken(entity *domain.UserEntity) (string, error) {
-	tokenTime := utils.GetRefreshTokenTime()
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"iss":  "Moon Writer",
-		"user": entity.Id,
-		"exp":  tokenTime,
-	})
-	tokenString, err := token.SignedString([]byte(config.SecretKey))
+func createRefreshToken(entity *domain.UserEntity) (string, bool) {
+	if entity != nil {
 
-	if err != nil {
-		log.Errorf("Refresh token signed error:\n", err)
-		return "", err
+		tokenTime := utils.GetRefreshTokenTime()
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"iss":  "Moon Writer",
+			"user": entity.Id,
+			"exp":  tokenTime,
+		})
+		tokenString, err := token.SignedString([]byte(config.SecretKey))
+
+		if err != nil {
+			return "", false
+		}
+
+		return tokenString, true
+
+	} else {
+		return "", false
 	}
-
-	return tokenString, nil
 }
 
-func (ar *authRepository) insertSession(access string, refresh string, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) (string, error) {
+func (ar *authRepository) insertSession(access string, refresh string, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) (string, bool) {
 	newSession := createSession(access, refresh, authReq, entity)
 	insertResult, errInsert := ar.collectionSessions.InsertOne(utils.GetContext(), bson.D{
 		{"user_id", newSession.UserId},
@@ -191,13 +191,18 @@ func (ar *authRepository) insertSession(access string, refresh string, authReq r
 	})
 
 	if errInsert != nil {
-		return "", errInsert
+		return "", false
 	}
 
-	return insertResult.InsertedID.(primitive.ObjectID).Hex(), nil
+	return insertResult.InsertedID.(primitive.ObjectID).Hex(), true
 }
 
-func (ar *authRepository) updateSession(access string, refresh string, entity *domain.UserEntity, authReq request.AuthenticateUserRequest) (string, error) {
+func (ar *authRepository) updateSession(
+	access string,
+	refresh string,
+	entity *domain.UserEntity,
+	authReq request.AuthenticateUserRequest,
+) (string, bool) {
 	res := ar.collectionSessions.FindOneAndUpdate(
 		utils.GetContext(),
 		bson.D{
@@ -216,10 +221,10 @@ func (ar *authRepository) updateSession(access string, refresh string, entity *d
 	decodeResult := res.Decode(&findSession)
 
 	if decodeResult != nil {
-		return "", errors.Unwrap(fmt.Errorf("UpdateSession Decode ERROR"))
+		return "", false
 	}
 
-	return findSession.Id, nil
+	return findSession.Id, true
 }
 
 func createSession(access string, refresh string, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) domain.SessionEntity {
@@ -232,4 +237,28 @@ func createSession(access string, refresh string, authReq request.AuthenticateUs
 		LastVisit:    utils.GetCurrentTime(),
 		MobileKey:    authReq.MobileKey,
 	}
+}
+
+func (ar *authRepository) createUpdateTokenResponse(
+	user *domain.UserEntity,
+	sessionId string,
+	accessToken string,
+	refreshToken string) response.AppResponse {
+	return ar.responseCreator.CreateResponse(response.TokenResponse{
+		Message:      fmt.Sprintf("Tokens updated for [%s]", user.UserName),
+		SessionId:    sessionId,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken}, user.UserName)
+}
+
+func (ar *authRepository) createNewTokenResponse(
+	user *domain.UserEntity,
+	sessionId string,
+	accessToken string,
+	refreshToken string) response.AppResponse {
+	return ar.responseCreator.CreateResponse(response.TokenResponse{
+		Message:      fmt.Sprintf("Tokens created for [%s]", user.UserName),
+		SessionId:    sessionId,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken}, user.UserName)
 }
