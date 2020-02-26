@@ -9,6 +9,7 @@ import (
 	"github.com/WiMank/MoonWriterService/interface/response"
 	"github.com/WiMank/MoonWriterService/interface/utils"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/go-playground/validator/v10"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -19,6 +20,7 @@ import (
 type refreshRepository struct {
 	collectionSessions *mongo.Collection
 	responseCreator    response.AppResponseCreator
+	validator          *validator.Validate
 }
 
 type RefreshRepository interface {
@@ -26,8 +28,15 @@ type RefreshRepository interface {
 	Refresh(request request.RefreshTokensRequest) response.AppResponse
 }
 
-func NewRefreshRepository(collectionSessions *mongo.Collection, responseCreator response.AppResponseCreator) RefreshRepository {
-	return &refreshRepository{collectionSessions, responseCreator}
+func NewRefreshRepository(
+	collectionSessions *mongo.Collection,
+	responseCreator response.AppResponseCreator,
+	validator *validator.Validate) RefreshRepository {
+	return &refreshRepository{
+		collectionSessions,
+		responseCreator,
+		validator,
+	}
 }
 
 func (rr *refreshRepository) DecodeRequest(r *http.Request) request.RefreshTokensRequest {
@@ -39,32 +48,32 @@ func (rr *refreshRepository) DecodeRequest(r *http.Request) request.RefreshToken
 }
 
 func (rr *refreshRepository) Refresh(request request.RefreshTokensRequest) response.AppResponse {
-	localSession, err := rr.findSession(request)
-	if err != nil {
-		return rr.responseCreator.CreateResponse(response.InvalidSession{}, request.Refresh.SessionId)
-	}
-
-	if rr.validateToken(request.Refresh.RefreshToken) {
-		access, errAuthenticate := rr.createAccessToken(localSession)
-		refresh, errAuthenticate := rr.createRefreshToken(localSession)
-		if errAuthenticate != nil {
-			return rr.responseCreator.CreateResponse(response.TokenErrorResponse{}, localSession.UserName)
+	if request.ValidateRequest(rr.validator) {
+		localSession, err := rr.findSession(request)
+		if err != nil {
+			return rr.responseCreator.CreateResponse(response.InvalidSession{}, request.Refresh.SessionId)
 		}
+		if rr.validateToken(request.Refresh.RefreshToken) {
+			access, errAuthenticate := rr.createAccessToken(localSession)
+			refresh, errAuthenticate := rr.createRefreshToken(localSession)
+			if errAuthenticate != nil {
+				return rr.responseCreator.CreateResponse(response.TokenErrorResponse{}, localSession.UserName)
+			}
 
-		errRefresh := rr.refreshSession(access, refresh, localSession)
-		if errRefresh != nil {
-			return rr.responseCreator.CreateResponse(response.RefreshSessionErrorResponse{}, localSession.UserName)
+			errRefresh := rr.refreshSession(access, refresh, localSession)
+			if errRefresh != nil {
+				return rr.responseCreator.CreateResponse(response.RefreshSessionErrorResponse{}, localSession.UserName)
+			}
+			return rr.responseCreator.CreateResponse(response.TokenResponse{
+				Message:      fmt.Sprintf("Tokens refreshed for [%s]", localSession.UserName),
+				SessionId:    localSession.Id,
+				AccessToken:  access,
+				RefreshToken: refresh,
+			}, "")
 		}
-
-		return rr.responseCreator.CreateResponse(response.TokenResponse{
-			Message:      fmt.Sprintf("Tokens refreshed for [%s]", localSession.UserName),
-			SessionId:    localSession.Id,
-			AccessToken:  access,
-			RefreshToken: refresh,
-		}, "")
+		return rr.responseCreator.CreateResponse(response.InvalidToken{}, localSession.Id)
 	}
-
-	return rr.responseCreator.CreateResponse(response.InvalidToken{}, localSession.Id)
+	return rr.responseCreator.CreateResponse(response.ValidateErrorResponse{}, "")
 }
 
 func (rr *refreshRepository) findSession(request request.RefreshTokensRequest) (*domain.SessionEntity, error) {

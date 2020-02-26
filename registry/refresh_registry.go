@@ -19,6 +19,7 @@ func (r *registry) CreateRefreshRepository() repository.RefreshRepository {
 	return repository.NewRefreshRepository(
 		r.db.Collection("sessions"),
 		r.CreateAppResponseCreator(),
+		r.validator,
 	)
 }
 

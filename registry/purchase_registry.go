@@ -21,6 +21,7 @@ func (r *registry) CreatePurchaseRepository() repository.PurchaseRepository {
 		r.db.Collection("sessions"),
 		r.db.Collection("purchase"),
 		r.CreateAppResponseCreator(),
+		r.validator,
 	)
 }
 

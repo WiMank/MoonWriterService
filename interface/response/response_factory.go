@@ -151,9 +151,15 @@ func (c *concreteAppResponseCreator) CreateResponse(i interface{}, data string) 
 		}
 	case InsertPurchaseErrorResponse:
 		appResponse = &InsertPurchaseErrorResponse{
-			Message: fmt.Sprintf("Failed to save purchase information. [%s]", data),
+			Message: fmt.Sprintf("Failed to save purchase information [%s]", data),
 			Code:    http.StatusInternalServerError,
 			Desc:    http.StatusText(http.StatusInternalServerError),
+		}
+	case ValidateErrorResponse:
+		appResponse = &ValidateErrorResponse{
+			Message: "Request failed validation",
+			Code:    http.StatusBadRequest,
+			Desc:    http.StatusText(http.StatusBadRequest),
 		}
 	default:
 		log.Fatal("Unknown Response")

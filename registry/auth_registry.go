@@ -21,6 +21,7 @@ func (r *registry) CreateAuthRepository() repository.AuthRepository {
 		r.db.Collection("users"),
 		r.db.Collection("sessions"),
 		r.CreateAppResponseCreator(),
+		r.validator,
 	)
 }
 

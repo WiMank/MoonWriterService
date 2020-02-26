@@ -3,7 +3,9 @@ module github.com/WiMank/MoonWriterService
 require (
 	cloud.google.com/go v0.53.0 // indirect
 	cloud.google.com/go/storage v1.5.0
+	github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/go-playground/validator/v10 v10.2.0
 	github.com/gorilla/mux v1.7.4
 	github.com/lib/pq v1.3.0
 	github.com/sirupsen/logrus v1.4.2

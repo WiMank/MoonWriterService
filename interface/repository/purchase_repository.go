@@ -9,6 +9,7 @@ import (
 	"github.com/WiMank/MoonWriterService/interface/response"
 	"github.com/WiMank/MoonWriterService/interface/utils"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/go-playground/validator/v10"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 	"go.mongodb.org/mongo-driver/bson"
@@ -25,6 +26,7 @@ type purchaseRepository struct {
 	collectionSessions *mongo.Collection
 	collectionPurchase *mongo.Collection
 	responseCreator    response.AppResponseCreator
+	validator          *validator.Validate
 }
 
 type PurchaseRepository interface {
@@ -38,12 +40,15 @@ func NewPurchaseRepository(
 	collectionUsers *mongo.Collection,
 	collectionSessions *mongo.Collection,
 	collectionPurchase *mongo.Collection,
-	responseCreator response.AppResponseCreator) PurchaseRepository {
+	responseCreator response.AppResponseCreator,
+	validator *validator.Validate,
+) PurchaseRepository {
 	return &purchaseRepository{
 		collectionUsers,
 		collectionSessions,
 		collectionPurchase,
 		responseCreator,
+		validator,
 	}
 }
 
@@ -64,58 +69,64 @@ func (pr *purchaseRepository) DecodeVerificationRequest(r *http.Request) request
 }
 
 func (pr *purchaseRepository) RegisterPurchase(request request.PurchaseRegisterRequest) response.AppResponse {
-	accessTokenExist := pr.checkAccessTokenExist(request.Purchase.AccessToken)
-	userId, accessTokenValid := pr.validateAccessToken(request.Purchase.AccessToken)
-	_, userExist := pr.checkFreeUserExist(userId)
-	if accessTokenExist {
-		if accessTokenValid {
-			if userExist {
-				if pr.checkPurchaseTokenNonExist(request.Purchase.PurchaseToken) {
-					if pr.insertPurchase(userId, request) {
-						return pr.responseCreator.CreateResponse(response.RegisterPurchaseResponse{}, userId)
+	if request.ValidateRequest(pr.validator) {
+		accessTokenExist := pr.checkAccessTokenExist(request.Purchase.AccessToken)
+		userId, accessTokenValid := pr.validateAccessToken(request.Purchase.AccessToken)
+		_, userExist := pr.checkFreeUserExist(userId)
+		if accessTokenExist {
+			if accessTokenValid {
+				if userExist {
+					if pr.checkPurchaseTokenNonExist(request.Purchase.PurchaseToken) {
+						if pr.insertPurchase(userId, request) {
+							return pr.responseCreator.CreateResponse(response.RegisterPurchaseResponse{}, userId)
+						} else {
+							return pr.responseCreator.CreateResponse(response.InsertPurchaseErrorResponse{}, userId)
+						}
 					} else {
-						return pr.responseCreator.CreateResponse(response.InsertPurchaseErrorResponse{}, userId)
+						return pr.responseCreator.CreateResponse(response.PurchaseTokenExistResponse{}, userId)
 					}
 				} else {
-					return pr.responseCreator.CreateResponse(response.PurchaseTokenExistResponse{}, userId)
+					return pr.responseCreator.CreateResponse(response.PurchaseUserExistResponse{}, userId)
 				}
 			} else {
-				return pr.responseCreator.CreateResponse(response.PurchaseUserExistResponse{}, userId)
+				return pr.responseCreator.CreateResponse(response.InvalidToken{}, userId)
 			}
 		} else {
 			return pr.responseCreator.CreateResponse(response.InvalidToken{}, userId)
 		}
-	} else {
-		return pr.responseCreator.CreateResponse(response.InvalidToken{}, userId)
 	}
+	return pr.responseCreator.CreateResponse(response.ValidateErrorResponse{}, "")
 }
 
 func (pr *purchaseRepository) VerificationPurchase(request request.PurchaseVerificationRequest) response.AppResponse {
-	accessTokenExist := pr.checkAccessTokenExist(request.Purchase.AccessToken)
-	userId, accessTokenValid := pr.validateAccessToken(request.Purchase.AccessToken)
-	localUser, userExist := pr.checkUserExist(userId)
-	localPurchase, purchaseExist := pr.checkPurchaseExist(localUser)
-	if accessTokenExist {
-		if accessTokenValid {
-			if userExist {
-				if purchaseExist {
-					if pr.checkPaymentData(localPurchase) {
-						return pr.responseCreator.CreateResponse(response.PurchaseValidResponse{}, userId)
+	if request.ValidateRequest(pr.validator) {
+		accessTokenExist := pr.checkAccessTokenExist(request.Purchase.AccessToken)
+		userId, accessTokenValid := pr.validateAccessToken(request.Purchase.AccessToken)
+		localUser, userExist := pr.checkUserExist(userId)
+		localPurchase, purchaseExist := pr.checkPurchaseExist(localUser)
+		if accessTokenExist {
+			if accessTokenValid {
+				if userExist {
+					if purchaseExist {
+						if pr.checkPaymentData(localPurchase) {
+							return pr.responseCreator.CreateResponse(response.PurchaseValidResponse{}, userId)
+						} else {
+							return pr.responseCreator.CreateResponse(response.CheckPaymentDataErrorResponse{}, userId)
+						}
 					} else {
-						return pr.responseCreator.CreateResponse(response.CheckPaymentDataErrorResponse{}, userId)
+						return pr.responseCreator.CreateResponse(response.PurchaseNotFoundResponse{}, userId)
 					}
 				} else {
-					return pr.responseCreator.CreateResponse(response.PurchaseNotFoundResponse{}, userId)
+					return pr.responseCreator.CreateResponse(response.PurchaseUserExistResponse{}, userId)
 				}
 			} else {
-				return pr.responseCreator.CreateResponse(response.PurchaseUserExistResponse{}, userId)
+				return pr.responseCreator.CreateResponse(response.InvalidToken{}, userId)
 			}
 		} else {
 			return pr.responseCreator.CreateResponse(response.InvalidToken{}, userId)
 		}
-	} else {
-		return pr.responseCreator.CreateResponse(response.InvalidToken{}, userId)
 	}
+	return pr.responseCreator.CreateResponse(response.ValidateErrorResponse{}, "")
 }
 
 func (pr *purchaseRepository) validateAccessToken(accessToken string) (string, bool) {

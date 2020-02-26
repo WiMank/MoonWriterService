@@ -10,6 +10,7 @@ import (
 	"github.com/WiMank/MoonWriterService/interface/response"
 	"github.com/WiMank/MoonWriterService/interface/utils"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/go-playground/validator/v10"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -21,6 +22,7 @@ type authRepository struct {
 	collectionUsers    *mongo.Collection
 	collectionSessions *mongo.Collection
 	responseCreator    response.AppResponseCreator
+	validator          *validator.Validate
 }
 
 type AuthRepository interface {
@@ -28,8 +30,8 @@ type AuthRepository interface {
 	AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponse
 }
 
-func NewAuthRepository(collectionUsers *mongo.Collection, collectionSessions *mongo.Collection, responseCreator response.AppResponseCreator) AuthRepository {
-	return &authRepository{collectionUsers, collectionSessions, responseCreator}
+func NewAuthRepository(collectionUsers *mongo.Collection, collectionSessions *mongo.Collection, responseCreator response.AppResponseCreator, validator *validator.Validate) AuthRepository {
+	return &authRepository{collectionUsers, collectionSessions, responseCreator, validator}
 }
 
 func (ar *authRepository) DecodeRequest(r *http.Request) request.AuthenticateUserRequest {
@@ -41,47 +43,50 @@ func (ar *authRepository) DecodeRequest(r *http.Request) request.AuthenticateUse
 }
 
 func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponse {
-	localUserEntity, errFindUser := ar.findUserEntity(authReq)
-	if errFindUser != nil {
-		return ar.responseCreator.CreateResponse(response.UserFindResponse{}, authReq.User.UserName)
-	}
-
-	session := ar.findSession(authReq.MobileKey)
-
-	if localUserEntity.CheckUserNameAndPass(authReq.User) {
-		ar.checkSessionsCount(authReq)
-
-		access, errAuthenticate := createAccessToken(localUserEntity)
-		refresh, errAuthenticate := createRefreshToken(localUserEntity)
-
-		if errAuthenticate != nil {
-			return ar.responseCreator.CreateResponse(response.TokenErrorResponse{}, authReq.User.UserName)
+	if authReq.ValidateRequest(ar.validator) {
+		localUserEntity, errFindUser := ar.findUserEntity(authReq)
+		if errFindUser != nil {
+			return ar.responseCreator.CreateResponse(response.UserFindResponse{}, authReq.User.UserName)
 		}
 
-		if session.CheckMkExist(authReq.MobileKey) {
-			updateResult, updateErr := ar.updateSession(access, refresh, localUserEntity, authReq)
-			if updateErr != nil {
-				ar.responseCreator.CreateResponse(response.SessionUpdateFailedResponse{}, authReq.User.UserName)
-			}
-			return ar.responseCreator.CreateResponse(response.TokenResponse{
-				Message:      fmt.Sprintf("Tokens updated for [%s]", localUserEntity.UserName),
-				SessionId:    updateResult,
-				AccessToken:  access,
-				RefreshToken: refresh}, authReq.User.UserName)
+		session := ar.findSession(authReq.MobileKey)
 
-		} else {
-			insertResult, insertErr := ar.insertSession(access, refresh, authReq, localUserEntity)
-			if insertErr != nil {
-				ar.responseCreator.CreateResponse(response.SessionInsertFailedResponse{}, authReq.User.UserName)
+		if localUserEntity.CheckUserNameAndPass(authReq.User) {
+			ar.checkSessionsCount(authReq)
+
+			access, errAuthenticate := createAccessToken(localUserEntity)
+			refresh, errAuthenticate := createRefreshToken(localUserEntity)
+
+			if errAuthenticate != nil {
+				return ar.responseCreator.CreateResponse(response.TokenErrorResponse{}, authReq.User.UserName)
 			}
-			return ar.responseCreator.CreateResponse(response.TokenResponse{
-				Message:      fmt.Sprintf("Tokens created for [%s]", localUserEntity.UserName),
-				SessionId:    insertResult,
-				AccessToken:  access,
-				RefreshToken: refresh}, authReq.User.UserName)
+
+			if session.CheckMkExist(authReq.MobileKey) {
+				updateResult, updateErr := ar.updateSession(access, refresh, localUserEntity, authReq)
+				if updateErr != nil {
+					ar.responseCreator.CreateResponse(response.SessionUpdateFailedResponse{}, authReq.User.UserName)
+				}
+				return ar.responseCreator.CreateResponse(response.TokenResponse{
+					Message:      fmt.Sprintf("Tokens updated for [%s]", localUserEntity.UserName),
+					SessionId:    updateResult,
+					AccessToken:  access,
+					RefreshToken: refresh}, authReq.User.UserName)
+
+			} else {
+				insertResult, insertErr := ar.insertSession(access, refresh, authReq, localUserEntity)
+				if insertErr != nil {
+					ar.responseCreator.CreateResponse(response.SessionInsertFailedResponse{}, authReq.User.UserName)
+				}
+				return ar.responseCreator.CreateResponse(response.TokenResponse{
+					Message:      fmt.Sprintf("Tokens created for [%s]", localUserEntity.UserName),
+					SessionId:    insertResult,
+					AccessToken:  access,
+					RefreshToken: refresh}, authReq.User.UserName)
+			}
 		}
+		return ar.responseCreator.CreateResponse(response.UnauthorizedResponse{}, authReq.User.UserName)
 	}
-	return ar.responseCreator.CreateResponse(response.UnauthorizedResponse{}, authReq.User.UserName)
+	return ar.responseCreator.CreateResponse(response.ValidateErrorResponse{}, "")
 }
 
 func (ar *authRepository) findUserEntity(authReq request.AuthenticateUserRequest) (*domain.UserEntity, error) {

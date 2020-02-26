@@ -19,6 +19,7 @@ func (r *registry) CreateUserRepository() repository.RegistrationRepository {
 	return repository.NewUserRepository(
 		r.db.Collection("users"),
 		r.CreateAppResponseCreator(),
+		r.validator,
 	)
 }
 
