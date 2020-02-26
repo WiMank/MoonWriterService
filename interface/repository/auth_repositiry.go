@@ -48,12 +48,12 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 		localUserEntity, userExist := ar.findUserEntity(authReq)
 		passwordAndNameCorrect := localUserEntity.CheckUserNameAndPass(authReq.User)
 		sessionExist := ar.checkSessionExist(authReq.MobileKey)
-		accessToken, refreshTokenCreated := createAccessToken(localUserEntity)
-		refreshToken, accessTokenCreated := createRefreshToken(localUserEntity)
+		accessToken, accessTokenCreated := ar.createAccessToken(localUserEntity)
+		refreshToken, refreshTokenCreated := ar.createRefreshToken(localUserEntity)
 
 		if userExist {
 			if passwordAndNameCorrect {
-				if refreshTokenCreated && accessTokenCreated {
+				if accessTokenCreated && refreshTokenCreated {
 					if sessionExist {
 						updateResult, sessionUpdated := ar.updateSession(accessToken, refreshToken, localUserEntity, authReq)
 						if sessionUpdated {
@@ -133,7 +133,7 @@ func (ar *authRepository) clearSessions(userBson bson.M) {
 	}
 }
 
-func createAccessToken(entity *domain.UserEntity) (string, bool) {
+func (ar *authRepository) createAccessToken(entity *domain.UserEntity) (string, bool) {
 	if entity != nil {
 
 		tokenTime := utils.GetAccessTokenTime()
@@ -156,7 +156,7 @@ func createAccessToken(entity *domain.UserEntity) (string, bool) {
 	}
 }
 
-func createRefreshToken(entity *domain.UserEntity) (string, bool) {
+func (ar *authRepository) createRefreshToken(entity *domain.UserEntity) (string, bool) {
 	if entity != nil {
 
 		tokenTime := utils.GetRefreshTokenTime()

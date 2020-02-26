@@ -50,45 +50,39 @@ func (rr *refreshRepository) DecodeRequest(r *http.Request) request.RefreshToken
 func (rr *refreshRepository) Refresh(request request.RefreshTokensRequest) response.AppResponse {
 	if request.ValidateRequest(rr.validator) {
 
-		localSession, err := rr.findSession(request)
+		tokenValid := rr.validateToken(request.Refresh.RefreshToken)
+		localSession, sessionExist := rr.findSession(request)
+		accessToken, accessTokenCreated := rr.createAccessToken(localSession)
+		refreshToken, refreshTokenCreated := rr.createRefreshToken(localSession)
 
-		if err != nil {
-			return rr.responseCreator.CreateResponse(response.InvalidSession{}, request.Refresh.SessionId)
-		}
-
-		if rr.validateToken(request.Refresh.RefreshToken) {
-			access, errAuthenticate := rr.createAccessToken(localSession)
-			refresh, errAuthenticate := rr.createRefreshToken(localSession)
-
-			if errAuthenticate != nil {
-				return rr.responseCreator.CreateResponse(response.TokenErrorResponse{}, localSession.UserName)
+		if tokenValid {
+			if sessionExist {
+				if accessTokenCreated && refreshTokenCreated {
+					isRefreshed := rr.refreshSession(accessToken, refreshToken, localSession)
+					if isRefreshed {
+						return rr.createRefreshTokenResponse(localSession, accessToken, refreshToken)
+					} else {
+						return rr.responseCreator.CreateResponse(response.RefreshSessionErrorResponse{}, localSession.UserName)
+					}
+				} else {
+					rr.responseCreator.CreateResponse(response.TokenErrorResponse{}, localSession.UserName)
+				}
+			} else {
+				return rr.responseCreator.CreateResponse(response.InvalidSession{}, request.Refresh.SessionId)
 			}
-
-			errRefresh := rr.refreshSession(access, refresh, localSession)
-
-			if errRefresh != nil {
-				return rr.responseCreator.CreateResponse(response.RefreshSessionErrorResponse{}, localSession.UserName)
-			}
-
-			return rr.responseCreator.CreateResponse(response.TokenResponse{
-				Message:      fmt.Sprintf("Tokens refreshed for [%s]", localSession.UserName),
-				SessionId:    localSession.Id,
-				AccessToken:  access,
-				RefreshToken: refresh,
-			}, "")
+		} else {
+			return rr.responseCreator.CreateResponse(response.InvalidToken{}, "")
 		}
-
-		return rr.responseCreator.CreateResponse(response.InvalidToken{}, localSession.Id)
 	}
 
 	return rr.responseCreator.CreateResponse(response.ValidateErrorResponse{}, "")
 }
 
-func (rr *refreshRepository) findSession(request request.RefreshTokensRequest) (*domain.SessionEntity, error) {
+func (rr *refreshRepository) findSession(request request.RefreshTokensRequest) (*domain.SessionEntity, bool) {
 	id, errHex := primitive.ObjectIDFromHex(request.Refresh.SessionId)
 
 	if errHex != nil {
-		return nil, errHex
+		return nil, false
 	}
 
 	var localSession domain.SessionEntity
@@ -99,14 +93,15 @@ func (rr *refreshRepository) findSession(request request.RefreshTokensRequest) (
 	}).Decode(&localSession)
 
 	if findSessionErr != nil {
-		return nil, findSessionErr
+		return nil, false
 	}
 
-	return &localSession, nil
+	return &localSession, true
 }
 
 func (rr *refreshRepository) validateToken(refreshToken string) bool {
 	token, err := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
+
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
@@ -124,67 +119,92 @@ func (rr *refreshRepository) validateToken(refreshToken string) bool {
 	return false
 }
 
-func (rr *refreshRepository) createAccessToken(entity *domain.SessionEntity) (string, error) {
-	tokenTime := utils.GetAccessTokenTime()
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"iss":  "Moon Writer",
-		"user": entity.UserId,
-		"role": entity.UserRole,
-		"exp":  tokenTime,
-	})
+func (rr *refreshRepository) createAccessToken(entity *domain.SessionEntity) (string, bool) {
+	if entity != nil {
 
-	tokenString, err := token.SignedString([]byte(config.SecretKey))
+		tokenTime := utils.GetAccessTokenTime()
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"iss":  "Moon Writer",
+			"user": entity.UserId,
+			"role": entity.UserRole,
+			"exp":  tokenTime,
+		})
 
-	if err != nil {
-		log.Errorf("Access token signed error:\n", err)
-		return "", err
+		tokenString, err := token.SignedString([]byte(config.SecretKey))
+
+		if err != nil {
+			return "", false
+		}
+
+		return tokenString, true
+
+	} else {
+		return "", false
 	}
-
-	return tokenString, nil
 }
 
-func (rr *refreshRepository) createRefreshToken(entity *domain.SessionEntity) (string, error) {
-	tokenTime := utils.GetRefreshTokenTime()
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"iss":  "Moon Writer",
-		"user": entity.UserId,
-		"exp":  tokenTime,
-	})
+func (rr *refreshRepository) createRefreshToken(entity *domain.SessionEntity) (string, bool) {
+	if entity != nil {
 
-	tokenString, err := token.SignedString([]byte(config.SecretKey))
+		tokenTime := utils.GetRefreshTokenTime()
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"iss":  "Moon Writer",
+			"user": entity.UserId,
+			"exp":  tokenTime,
+		})
 
-	if err != nil {
-		log.Errorf("Refresh token signed error:\n", err)
-		return "", err
+		tokenString, err := token.SignedString([]byte(config.SecretKey))
+
+		if err != nil {
+			return "", false
+		}
+
+		return tokenString, true
+
+	} else {
+		return "", false
 	}
-
-	return tokenString, nil
 }
 
-func (rr *refreshRepository) refreshSession(access string, refresh string, entity *domain.SessionEntity) error {
-	id, errHex := primitive.ObjectIDFromHex(entity.Id)
+func (rr *refreshRepository) refreshSession(access string, refresh string, entity *domain.SessionEntity) bool {
+	if entity != nil {
 
-	if errHex != nil {
-		return errHex
+		id, errHex := primitive.ObjectIDFromHex(entity.Id)
+
+		if errHex != nil {
+			return false
+		}
+
+		_, errUpdate := rr.collectionSessions.UpdateOne(
+			utils.GetContext(),
+			bson.D{
+				{"_id", id},
+				{"refresh_token", entity.RefreshToken},
+				{"mobile_key", entity.MobileKey},
+			},
+			bson.D{{
+				"$set", bson.D{
+					{"access_token", access},
+					{"refresh_token", refresh},
+					{"last_visit", utils.GetCurrentTime()},
+				}}})
+
+		if errUpdate != nil {
+			return false
+		}
+
+		return true
+
+	} else {
+		return false
 	}
+}
 
-	_, errUpdate := rr.collectionSessions.UpdateOne(
-		utils.GetContext(),
-		bson.D{
-			{"_id", id},
-			{"refresh_token", entity.RefreshToken},
-			{"mobile_key", entity.MobileKey},
-		},
-		bson.D{{
-			"$set", bson.D{
-				{"access_token", access},
-				{"refresh_token", refresh},
-				{"last_visit", utils.GetCurrentTime()},
-			}}})
-
-	if errUpdate != nil {
-		return errUpdate
-	}
-
-	return nil
+func (rr *refreshRepository) createRefreshTokenResponse(entity *domain.SessionEntity, access string, refresh string) response.AppResponse {
+	return rr.responseCreator.CreateResponse(response.TokenResponse{
+		Message:      fmt.Sprintf("Tokens refreshed for [%s]", entity.UserName),
+		SessionId:    entity.Id,
+		AccessToken:  access,
+		RefreshToken: refresh,
+	}, "")
 }
