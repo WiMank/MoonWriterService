@@ -1,22 +1,20 @@
 package repository
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/WiMank/MoonWriterService/domain"
 	"github.com/WiMank/MoonWriterService/interface/request"
 	"github.com/WiMank/MoonWriterService/interface/response"
+	"github.com/WiMank/MoonWriterService/interface/utils"
 	"github.com/go-playground/validator/v10"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
-	"time"
 )
 
 type registrationRepository struct {
-	collection      *mongo.Collection
+	collectionUsers *mongo.Collection
 	responseCreator response.AppResponseCreator
 	validator       *validator.Validate
 }
@@ -27,11 +25,11 @@ type RegistrationRepository interface {
 }
 
 func NewUserRepository(
-	collection *mongo.Collection,
+	collectionUsers *mongo.Collection,
 	responseCreator response.AppResponseCreator,
 	validator *validator.Validate,
 ) RegistrationRepository {
-	return &registrationRepository{collection, responseCreator, validator}
+	return &registrationRepository{collectionUsers, responseCreator, validator}
 }
 
 func (ur *registrationRepository) DecodeRequest(r *http.Request) request.UserRegistrationRequest {
@@ -47,29 +45,53 @@ func (ur *registrationRepository) DecodeRequest(r *http.Request) request.UserReg
 func (ur *registrationRepository) InsertUser(request request.UserRegistrationRequest) response.AppResponse {
 	if request.ValidateRequest(ur.validator) {
 
-		var localUserEntity domain.UserEntity
-		ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-		findUserErr := ur.collection.FindOne(ctx, bson.D{{"user_name", request.User.UserName}}).Decode(&localUserEntity)
+		userExist := ur.findUserEntity(request)
 
-		if findUserErr != nil {
-			log.Errorf(fmt.Sprintf("User [%s] not found: %v", request.User.UserName, findUserErr))
-		}
-
-		if localUserEntity.CheckUserExist(request.User) {
+		if !userExist {
+			insertComplete := ur.insertUserEntity(&request.User)
+			if insertComplete {
+				return ur.responseCreator.CreateResponse(response.UserCreatedResponse{}, request.User.UserName)
+			} else {
+				return ur.responseCreator.CreateResponse(response.UserInsertErrorResponse{}, request.User.UserName)
+			}
+		} else {
 			return ur.responseCreator.CreateResponse(response.UserExistResponse{}, request.User.UserName)
 		}
-
-		if _, err := ur.collection.InsertOne(ctx, bson.D{
-			{"user_name", request.User.UserName},
-			{"user_pass", request.User.UserPass},
-			{"user_role", "user"},
-			{"is_premium_user", false},
-		}); err != nil {
-			return ur.responseCreator.CreateResponse(response.UserInsertErrorResponse{}, request.User.UserName)
-		}
-
-		return ur.responseCreator.CreateResponse(response.UserCreatedResponse{}, request.User.UserName)
 	}
 
 	return ur.responseCreator.CreateResponse(response.ValidateErrorResponse{}, "")
+}
+
+func (ur *registrationRepository) findUserEntity(authReq request.UserRegistrationRequest) bool {
+	count, err := ur.collectionUsers.CountDocuments(utils.GetContext(),
+		bson.D{
+			{"user_name", authReq.User.UserName},
+			{"user_pass", authReq.User.UserPass},
+		})
+
+	if err != nil {
+		return false
+	}
+
+	if count != 1 {
+		return false
+	}
+
+	return true
+}
+
+func (ur *registrationRepository) insertUserEntity(entity *domain.UserEntity) bool {
+	_, err := ur.collectionUsers.InsertOne(utils.GetContext(),
+		bson.D{
+			{"user_name", entity.UserName},
+			{"user_pass", entity.UserPass},
+			{"user_role", "user"},
+			{"is_premium_user", false},
+		})
+
+	if err != nil {
+		return false
+	}
+
+	return true
 }
