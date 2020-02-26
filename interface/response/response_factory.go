@@ -71,31 +71,31 @@ func (c *concreteAppResponseCreator) CreateResponse(i interface{}, data string) 
 			Desc:    http.StatusText(http.StatusInternalServerError),
 		}
 	case SessionUpdateFailedResponse:
-		appResponse = &TokenErrorResponse{
+		appResponse = &SessionUpdateFailedResponse{
 			Message: fmt.Sprintf("Error updating session for user [%s]", data),
 			Code:    http.StatusInternalServerError,
 			Desc:    http.StatusText(http.StatusInternalServerError),
 		}
 	case SessionInsertFailedResponse:
-		appResponse = &TokenErrorResponse{
+		appResponse = &SessionInsertFailedResponse{
 			Message: fmt.Sprintf("Session insert error for user [%s]", data),
 			Code:    http.StatusInternalServerError,
 			Desc:    http.StatusText(http.StatusInternalServerError),
 		}
 	case InvalidSession:
-		appResponse = &TokenErrorResponse{
+		appResponse = &InvalidSession{
 			Message: fmt.Sprintf("INVALID SESSION [%s]", data),
 			Code:    http.StatusBadRequest,
 			Desc:    http.StatusText(http.StatusBadRequest),
 		}
 	case InvalidToken:
-		appResponse = &TokenErrorResponse{
+		appResponse = &InvalidToken{
 			Message: fmt.Sprintf("INVALID TOKEN [%s]", data),
 			Code:    http.StatusBadRequest,
 			Desc:    http.StatusText(http.StatusBadRequest),
 		}
 	case RefreshSessionErrorResponse:
-		appResponse = &TokenErrorResponse{
+		appResponse = &RefreshSessionErrorResponse{
 			Message: "Session Update Error",
 			Code:    http.StatusInternalServerError,
 			Desc:    http.StatusText(http.StatusInternalServerError),

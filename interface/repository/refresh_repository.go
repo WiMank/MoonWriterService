@@ -49,21 +49,27 @@ func (rr *refreshRepository) DecodeRequest(r *http.Request) request.RefreshToken
 
 func (rr *refreshRepository) Refresh(request request.RefreshTokensRequest) response.AppResponse {
 	if request.ValidateRequest(rr.validator) {
+
 		localSession, err := rr.findSession(request)
+
 		if err != nil {
 			return rr.responseCreator.CreateResponse(response.InvalidSession{}, request.Refresh.SessionId)
 		}
+
 		if rr.validateToken(request.Refresh.RefreshToken) {
 			access, errAuthenticate := rr.createAccessToken(localSession)
 			refresh, errAuthenticate := rr.createRefreshToken(localSession)
+
 			if errAuthenticate != nil {
 				return rr.responseCreator.CreateResponse(response.TokenErrorResponse{}, localSession.UserName)
 			}
 
 			errRefresh := rr.refreshSession(access, refresh, localSession)
+
 			if errRefresh != nil {
 				return rr.responseCreator.CreateResponse(response.RefreshSessionErrorResponse{}, localSession.UserName)
 			}
+
 			return rr.responseCreator.CreateResponse(response.TokenResponse{
 				Message:      fmt.Sprintf("Tokens refreshed for [%s]", localSession.UserName),
 				SessionId:    localSession.Id,
@@ -71,13 +77,16 @@ func (rr *refreshRepository) Refresh(request request.RefreshTokensRequest) respo
 				RefreshToken: refresh,
 			}, "")
 		}
+
 		return rr.responseCreator.CreateResponse(response.InvalidToken{}, localSession.Id)
 	}
+
 	return rr.responseCreator.CreateResponse(response.ValidateErrorResponse{}, "")
 }
 
 func (rr *refreshRepository) findSession(request request.RefreshTokensRequest) (*domain.SessionEntity, error) {
 	id, errHex := primitive.ObjectIDFromHex(request.Refresh.SessionId)
+
 	if errHex != nil {
 		return nil, errHex
 	}
@@ -92,6 +101,7 @@ func (rr *refreshRepository) findSession(request request.RefreshTokensRequest) (
 	if findSessionErr != nil {
 		return nil, findSessionErr
 	}
+
 	return &localSession, nil
 }
 
@@ -122,11 +132,14 @@ func (rr *refreshRepository) createAccessToken(entity *domain.SessionEntity) (st
 		"role": entity.UserRole,
 		"exp":  tokenTime,
 	})
+
 	tokenString, err := token.SignedString([]byte(config.SecretKey))
+
 	if err != nil {
 		log.Errorf("Access token signed error:\n", err)
 		return "", err
 	}
+
 	return tokenString, nil
 }
 
@@ -137,19 +150,24 @@ func (rr *refreshRepository) createRefreshToken(entity *domain.SessionEntity) (s
 		"user": entity.UserId,
 		"exp":  tokenTime,
 	})
+
 	tokenString, err := token.SignedString([]byte(config.SecretKey))
+
 	if err != nil {
 		log.Errorf("Refresh token signed error:\n", err)
 		return "", err
 	}
+
 	return tokenString, nil
 }
 
 func (rr *refreshRepository) refreshSession(access string, refresh string, entity *domain.SessionEntity) error {
 	id, errHex := primitive.ObjectIDFromHex(entity.Id)
+
 	if errHex != nil {
 		return errHex
 	}
+
 	_, errUpdate := rr.collectionSessions.UpdateOne(
 		utils.GetContext(),
 		bson.D{
@@ -167,5 +185,6 @@ func (rr *refreshRepository) refreshSession(access string, refresh string, entit
 	if errUpdate != nil {
 		return errUpdate
 	}
+
 	return nil
 }

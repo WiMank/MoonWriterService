@@ -45,6 +45,7 @@ func (ar *authRepository) DecodeRequest(r *http.Request) request.AuthenticateUse
 func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponse {
 	if authReq.ValidateRequest(ar.validator) {
 		localUserEntity, errFindUser := ar.findUserEntity(authReq)
+
 		if errFindUser != nil {
 			return ar.responseCreator.CreateResponse(response.UserFindResponse{}, authReq.User.UserName)
 		}
@@ -53,19 +54,20 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 
 		if localUserEntity.CheckUserNameAndPass(authReq.User) {
 			ar.checkSessionsCount(authReq)
-
 			access, errAuthenticate := createAccessToken(localUserEntity)
 			refresh, errAuthenticate := createRefreshToken(localUserEntity)
 
 			if errAuthenticate != nil {
+
 				return ar.responseCreator.CreateResponse(response.TokenErrorResponse{}, authReq.User.UserName)
 			}
-
 			if session.CheckMkExist(authReq.MobileKey) {
 				updateResult, updateErr := ar.updateSession(access, refresh, localUserEntity, authReq)
+
 				if updateErr != nil {
 					ar.responseCreator.CreateResponse(response.SessionUpdateFailedResponse{}, authReq.User.UserName)
 				}
+
 				return ar.responseCreator.CreateResponse(response.TokenResponse{
 					Message:      fmt.Sprintf("Tokens updated for [%s]", localUserEntity.UserName),
 					SessionId:    updateResult,
@@ -73,10 +75,12 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 					RefreshToken: refresh}, authReq.User.UserName)
 
 			} else {
+
 				insertResult, insertErr := ar.insertSession(access, refresh, authReq, localUserEntity)
 				if insertErr != nil {
 					ar.responseCreator.CreateResponse(response.SessionInsertFailedResponse{}, authReq.User.UserName)
 				}
+
 				return ar.responseCreator.CreateResponse(response.TokenResponse{
 					Message:      fmt.Sprintf("Tokens created for [%s]", localUserEntity.UserName),
 					SessionId:    insertResult,
@@ -84,36 +88,44 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 					RefreshToken: refresh}, authReq.User.UserName)
 			}
 		}
+
 		return ar.responseCreator.CreateResponse(response.UnauthorizedResponse{}, authReq.User.UserName)
 	}
+
 	return ar.responseCreator.CreateResponse(response.ValidateErrorResponse{}, "")
 }
 
 func (ar *authRepository) findUserEntity(authReq request.AuthenticateUserRequest) (*domain.UserEntity, error) {
 	var localUserEntity domain.UserEntity
 	userBson := bson.D{{"user_name", authReq.User.UserName}, {"user_pass", authReq.User.UserPass}}
+
 	if errFind := ar.collectionUsers.FindOne(utils.GetContext(), userBson).Decode(&localUserEntity); errFind != nil {
 		return nil, errFind
 	}
+
 	return &localUserEntity, nil
 }
 
 func (ar *authRepository) findSession(mk string) *domain.SessionEntity {
 	var session domain.SessionEntity
 	errMk := ar.collectionSessions.FindOne(utils.GetContext(), bson.M{"mobile_key": mk}).Decode(&session)
+
 	if errMk != nil {
 		log.Error("FindSession error: ", errMk)
 		return nil
 	}
+
 	return &session
 }
 
 func (ar *authRepository) checkSessionsCount(authReq request.AuthenticateUserRequest) {
 	userBson := bson.M{"user_name": authReq.User.UserName}
 	count, errCount := ar.collectionSessions.CountDocuments(utils.GetContext(), userBson)
+
 	if count > 5 {
 		ar.clearSessions(userBson)
 	}
+
 	if errCount != nil {
 		log.Errorf("CheckSessionsCount error: \n", errCount)
 	}
@@ -121,9 +133,11 @@ func (ar *authRepository) checkSessionsCount(authReq request.AuthenticateUserReq
 
 func (ar *authRepository) clearSessions(userBson bson.M) {
 	result, errDelete := ar.collectionSessions.DeleteMany(utils.GetContext(), userBson)
+
 	if errDelete != nil {
 		log.Errorf("ClearSessions error:\n", errDelete)
 	}
+
 	if result != nil {
 		log.Info("Delete result: ", result.DeletedCount)
 	}
@@ -138,10 +152,12 @@ func createAccessToken(entity *domain.UserEntity) (string, error) {
 		"exp":  tokenTime,
 	})
 	tokenString, err := token.SignedString([]byte(config.SecretKey))
+
 	if err != nil {
 		log.Errorf("Access token signed error:\n", err)
 		return "", err
 	}
+
 	return tokenString, nil
 }
 
@@ -153,10 +169,12 @@ func createRefreshToken(entity *domain.UserEntity) (string, error) {
 		"exp":  tokenTime,
 	})
 	tokenString, err := token.SignedString([]byte(config.SecretKey))
+
 	if err != nil {
 		log.Errorf("Refresh token signed error:\n", err)
 		return "", err
 	}
+
 	return tokenString, nil
 }
 
@@ -171,9 +189,11 @@ func (ar *authRepository) insertSession(access string, refresh string, authReq r
 		{"last_visit", newSession.LastVisit},
 		{"mobile_key", newSession.MobileKey},
 	})
+
 	if errInsert != nil {
 		return "", errInsert
 	}
+
 	return insertResult.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
@@ -194,9 +214,11 @@ func (ar *authRepository) updateSession(access string, refresh string, entity *d
 
 	var findSession domain.SessionEntity
 	decodeResult := res.Decode(&findSession)
+
 	if decodeResult != nil {
 		return "", errors.Unwrap(fmt.Errorf("UpdateSession Decode ERROR"))
 	}
+
 	return findSession.Id, nil
 }
 

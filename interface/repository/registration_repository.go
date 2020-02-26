@@ -36,23 +36,29 @@ func NewUserRepository(
 
 func (ur *registrationRepository) DecodeRequest(r *http.Request) request.UserRegistrationRequest {
 	var requestUser request.UserRegistrationRequest
+
 	if err := json.NewDecoder(r.Body).Decode(&requestUser); err != nil {
 		log.Error("Decode User response error! ", err)
 	}
+
 	return requestUser
 }
 
 func (ur *registrationRepository) InsertUser(request request.UserRegistrationRequest) response.AppResponse {
 	if request.ValidateRequest(ur.validator) {
+
 		var localUserEntity domain.UserEntity
 		ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 		findUserErr := ur.collection.FindOne(ctx, bson.D{{"user_name", request.User.UserName}}).Decode(&localUserEntity)
+
 		if findUserErr != nil {
 			log.Errorf(fmt.Sprintf("User [%s] not found: %v", request.User.UserName, findUserErr))
 		}
+
 		if localUserEntity.CheckUserExist(request.User) {
 			return ur.responseCreator.CreateResponse(response.UserExistResponse{}, request.User.UserName)
 		}
+
 		if _, err := ur.collection.InsertOne(ctx, bson.D{
 			{"user_name", request.User.UserName},
 			{"user_pass", request.User.UserPass},
@@ -61,7 +67,9 @@ func (ur *registrationRepository) InsertUser(request request.UserRegistrationReq
 		}); err != nil {
 			return ur.responseCreator.CreateResponse(response.UserInsertErrorResponse{}, request.User.UserName)
 		}
+
 		return ur.responseCreator.CreateResponse(response.UserCreatedResponse{}, request.User.UserName)
 	}
+
 	return ur.responseCreator.CreateResponse(response.ValidateErrorResponse{}, "")
 }

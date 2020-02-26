@@ -70,9 +70,11 @@ func (pr *purchaseRepository) DecodeVerificationRequest(r *http.Request) request
 
 func (pr *purchaseRepository) RegisterPurchase(request request.PurchaseRegisterRequest) response.AppResponse {
 	if request.ValidateRequest(pr.validator) {
+
 		accessTokenExist := pr.checkAccessTokenExist(request.Purchase.AccessToken)
 		userId, accessTokenValid := pr.validateAccessToken(request.Purchase.AccessToken)
 		_, userExist := pr.checkFreeUserExist(userId)
+
 		if accessTokenExist {
 			if accessTokenValid {
 				if userExist {
@@ -95,6 +97,7 @@ func (pr *purchaseRepository) RegisterPurchase(request request.PurchaseRegisterR
 			return pr.responseCreator.CreateResponse(response.InvalidToken{}, userId)
 		}
 	}
+
 	return pr.responseCreator.CreateResponse(response.ValidateErrorResponse{}, "")
 }
 
@@ -104,6 +107,7 @@ func (pr *purchaseRepository) VerificationPurchase(request request.PurchaseVerif
 		userId, accessTokenValid := pr.validateAccessToken(request.Purchase.AccessToken)
 		localUser, userExist := pr.checkUserExist(userId)
 		localPurchase, purchaseExist := pr.checkPurchaseExist(localUser)
+
 		if accessTokenExist {
 			if accessTokenValid {
 				if userExist {
@@ -126,6 +130,7 @@ func (pr *purchaseRepository) VerificationPurchase(request request.PurchaseVerif
 			return pr.responseCreator.CreateResponse(response.InvalidToken{}, userId)
 		}
 	}
+
 	return pr.responseCreator.CreateResponse(response.ValidateErrorResponse{}, "")
 }
 
@@ -136,24 +141,29 @@ func (pr *purchaseRepository) validateAccessToken(accessToken string) (string, b
 		}
 		return []byte(config.SecretKey), nil
 	})
+
 	if err != nil {
 		fmt.Println(err)
 		return "", false
 	}
+
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		return cast.ToString(claims["user"]), true
 	}
+
 	return "", false
 }
 
 func (pr *purchaseRepository) checkFreeUserExist(userId string) (*domain.UserEntity, bool) {
 	id, errHex := primitive.ObjectIDFromHex(userId)
+
 	if errHex != nil {
 		return nil, false
 	}
 
 	var localUser domain.UserEntity
 	err := pr.collectionUsers.FindOne(utils.GetContext(), bson.D{{"_id", id}}).Decode(&localUser)
+
 	if err != nil {
 		return nil, false
 	}
@@ -161,20 +171,24 @@ func (pr *purchaseRepository) checkFreeUserExist(userId string) (*domain.UserEnt
 	if (localUser.Id == userId) && (!localUser.IsPremiumUser) {
 		return &localUser, true
 	}
+
 	return nil, false
 }
 
 func (pr *purchaseRepository) checkUserExist(userId string) (*domain.UserEntity, bool) {
 	id, errHex := primitive.ObjectIDFromHex(userId)
+
 	if errHex != nil {
 		return nil, false
 	}
 
 	var localUser domain.UserEntity
 	err := pr.collectionUsers.FindOne(utils.GetContext(), bson.D{{"_id", id}}).Decode(&localUser)
+
 	if err != nil {
 		return nil, false
 	}
+
 	return &localUser, true
 }
 
@@ -182,12 +196,15 @@ func (pr *purchaseRepository) checkPurchaseTokenNonExist(purchaseToken string) b
 	count, err := pr.collectionPurchase.CountDocuments(
 		utils.GetContext(),
 		bson.D{{"purchase_token", purchaseToken}})
+
 	if err != nil {
 		return false
 	}
+
 	if count == 1 {
 		return false
 	}
+
 	return true
 }
 
@@ -195,12 +212,15 @@ func (pr *purchaseRepository) checkAccessTokenExist(accessToken string) bool {
 	count, err := pr.collectionSessions.CountDocuments(
 		utils.GetContext(),
 		bson.D{{"access_token", accessToken}})
+
 	if err != nil {
 		return false
 	}
+
 	if count == 1 {
 		return true
 	}
+
 	return false
 }
 
@@ -220,9 +240,11 @@ func (pr *purchaseRepository) insertPurchase(userId string, request request.Purc
 	}
 
 	id, errHex := primitive.ObjectIDFromHex(userId)
+
 	if errHex != nil {
 		return false
 	}
+
 	_, errUpdate := pr.collectionUsers.UpdateOne(
 		utils.GetContext(),
 		bson.D{{"_id", id}},
@@ -231,6 +253,7 @@ func (pr *purchaseRepository) insertPurchase(userId string, request request.Purc
 	if errUpdate != nil {
 		return false
 	}
+
 	return true
 }
 
@@ -244,8 +267,10 @@ func (pr *purchaseRepository) checkPurchaseExist(user *domain.UserEntity) (*doma
 		if errFind != nil {
 			return nil, false
 		}
+
 		return &localPurchase, true
 	}
+
 	return nil, false
 }
 
@@ -261,16 +286,20 @@ func (pr *purchaseRepository) checkPaymentData(purchase *domain.Purchase) bool {
 		}
 
 		r, getErr := androidPublisherService.Purchases.Products.Get(
-			config.APP_PACKAGE,
+			config.AppPackage,
 			purchase.Sku,
 			purchase.PurchaseToken).Do()
+
 		if getErr != nil {
 			return false
 		}
+
 		if r.HTTPStatusCode == http.StatusOK {
 			return true
 		}
+
 		return false
 	}
+
 	return false
 }
