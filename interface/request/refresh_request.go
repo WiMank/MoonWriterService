@@ -7,7 +7,7 @@ import (
 
 type RefreshTokensRequest struct {
 	Refresh struct {
-		SessionId    string `json:"session_id" validate:"required"`
+		SessionId    int    `json:"session_id" validate:"required"`
 		RefreshToken string `json:"refresh_token" validate:"required,gte=100,lte=200"`
 		MobileKey    string `json:"mobile_key" validate:"required"`
 	} `json:"refresh"`

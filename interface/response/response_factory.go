@@ -12,7 +12,7 @@ type AppResponse interface {
 }
 
 type AppResponseCreator interface {
-	CreateResponse(i interface{}, userName string) AppResponse
+	CreateResponse(i interface{}, data string) AppResponse
 }
 
 type concreteAppResponseCreator struct {

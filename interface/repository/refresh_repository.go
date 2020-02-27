@@ -12,7 +12,9 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cast"
 	"net/http"
+	"time"
 )
 
 type refreshRepository struct {
@@ -66,7 +68,7 @@ func (rr *refreshRepository) Refresh(request request.RefreshTokensRequest) respo
 					rr.responseCreator.CreateResponse(response.TokenErrorResponse{}, localSession.UserName)
 				}
 			} else {
-				return rr.responseCreator.CreateResponse(response.InvalidSession{}, request.Refresh.SessionId)
+				return rr.responseCreator.CreateResponse(response.InvalidSession{}, cast.ToString(request.Refresh.SessionId))
 			}
 		} else {
 			return rr.responseCreator.CreateResponse(response.InvalidToken{}, "")
@@ -77,26 +79,17 @@ func (rr *refreshRepository) Refresh(request request.RefreshTokensRequest) respo
 }
 
 func (rr *refreshRepository) findSession(request request.RefreshTokensRequest) (*domain.SessionEntity, bool) {
-	/*id, errHex := primitive.ObjectIDFromHex(request.Refresh.SessionId)
-
-	if errHex != nil {
-		return nil, false
-	}
-
 	var localSession domain.SessionEntity
-	findSessionErr := rr.collectionSessions.FindOne(utils.GetContext(), bson.D{
-		{"_id", id},
-		{"mobile_key", request.Refresh.MobileKey},
-		{"refresh_token", request.Refresh.RefreshToken},
-	}).Decode(&localSession)
-
-	if findSessionErr != nil {
+	existQuery := "SELECT * FROM sessions WHERE session_id=$1 AND mobile_key=$2 AND refresh_token=$3"
+	err := rr.db.QueryRowx(existQuery,
+		request.Refresh.SessionId,
+		request.Refresh.MobileKey,
+		request.Refresh.RefreshToken).StructScan(&localSession)
+	if err != nil {
 		return nil, false
 	}
 
-	return &localSession, true*/
-
-	return nil, false
+	return &localSession, true
 }
 
 func (rr *refreshRepository) validateToken(refreshToken string) bool {
@@ -167,39 +160,14 @@ func (rr *refreshRepository) createRefreshToken(entity *domain.SessionEntity) (s
 }
 
 func (rr *refreshRepository) refreshSession(access string, refresh string, entity *domain.SessionEntity) bool {
-	/*if entity != nil {
-
-		id, errHex := primitive.ObjectIDFromHex(entity.Id)
-
-		if errHex != nil {
-			return false
-		}
-
-		_, errUpdate := rr.collectionSessions.UpdateOne(
-			utils.GetContext(),
-			bson.D{
-				{"_id", id},
-				{"refresh_token", entity.RefreshToken},
-				{"mobile_key", entity.MobileKey},
-			},
-			bson.D{{
-				"$set", bson.D{
-					{"access_token", access},
-					{"refresh_token", refresh},
-					{"last_visit", utils.GetCurrentTime()},
-				}}})
-
-		if errUpdate != nil {
-			return false
-		}
-
-		return true
-
-	} else {
+	updateExec := "UPDATE sessions SET (access_token, refresh_token, last_visit) = ($1, $2, $3) " +
+		"WHERE session_id=$4 AND refresh_token=$5 AND mobile_key=$6"
+	_, err := rr.db.Exec(updateExec, access, refresh, time.Now(), entity.Id, entity.RefreshToken, entity.MobileKey)
+	if err != nil {
 		return false
-	}*/
+	}
 
-	return false
+	return true
 }
 
 func (rr *refreshRepository) createRefreshTokenResponse(entity *domain.SessionEntity, access string, refresh string) response.AppResponse {
