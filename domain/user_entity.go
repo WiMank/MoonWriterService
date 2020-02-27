@@ -1,7 +1,6 @@
 package domain
 
 type UserEntity struct {
-	Id            string `db:"_id" json:"-"`
 	UserName      string `db:"user_name" json:"user_name" validate:"required,gte=2,lte=25"`
 	UserPass      string `db:"user_pass" json:"user_pass" validate:"required,gte=6,lte=50"`
 	UserRole      string `db:"user_role" json:"-"`

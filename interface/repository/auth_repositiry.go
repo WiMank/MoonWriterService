@@ -13,7 +13,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
 	"net/http"
-	"time"
 )
 
 type authRepository struct {
@@ -136,7 +135,7 @@ func (ar *authRepository) createAccessToken(entity *domain.UserEntity) (string, 
 		tokenTime := utils.GetAccessTokenTime()
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"iss":  "Moon Writer",
-			"user": entity.Id,
+			"user": entity.UserName,
 			"role": entity.UserRole,
 			"exp":  tokenTime,
 		})
@@ -159,7 +158,7 @@ func (ar *authRepository) createRefreshToken(entity *domain.UserEntity) (string,
 		tokenTime := utils.GetRefreshTokenTime()
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"iss":  "Moon Writer",
-			"user": entity.Id,
+			"user": entity.UserName,
 			"exp":  tokenTime,
 		})
 		tokenString, err := token.SignedString([]byte(config.SecretKey))
@@ -184,9 +183,10 @@ func (ar *authRepository) insertSession(
 	var id int
 	insertQuery := "INSERT INTO sessions as s (user_name, user_role, access_token, refresh_token, mobile_key, last_visit) " +
 		"VALUES ($1, $2, $3, $4, $5, $6) RETURNING s.session_id"
-	err := ar.db.QueryRowx(insertQuery, entity.UserName, entity.UserRole, access, refresh, mk, time.Now()).Scan(&id)
+	err := ar.db.QueryRowx(insertQuery, entity.UserName, entity.UserRole, access, refresh, mk, utils.GetCurrentTime()).Scan(&id)
 
 	if err != nil {
+		log.Error("insertSession: ", err)
 		return 0, false
 	}
 
@@ -203,7 +203,7 @@ func (ar *authRepository) updateSession(
 	var id int
 	updateQuery := "UPDATE sessions as s SET (access_token, refresh_token, last_visit) = ($1, $2, $3)" +
 		" WHERE user_name=$4 AND mobile_key=$5 RETURNING s.session_id"
-	err := ar.db.QueryRowx(updateQuery, access, refresh, time.Now(), entity.UserName, authReq.MobileKey).Scan(&id)
+	err := ar.db.QueryRowx(updateQuery, access, refresh, utils.GetCurrentTime(), entity.UserName, authReq.MobileKey).Scan(&id)
 
 	if err != nil {
 		return 0, false
