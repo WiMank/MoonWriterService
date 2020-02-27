@@ -62,8 +62,8 @@ func (ur *registrationRepository) InsertUser(request request.UserRegistrationReq
 
 func (ur *registrationRepository) findUserEntity(authReq request.UserRegistrationRequest) bool {
 	var exist bool
-	existQuery := "SELECT EXISTS (SELECT FROM users WHERE user_name=$1)::boolean"
-	err := ur.db.QueryRowx(existQuery, authReq.User.UserName).Scan(&exist)
+	existQuery := "SELECT EXISTS (SELECT FROM users WHERE user_name=$1 AND user_pass=$2)::boolean"
+	err := ur.db.QueryRowx(existQuery, authReq.User.UserName, authReq.User.UserPass).Scan(&exist)
 	if err != nil {
 		log.Error("findUserEntity: ", err)
 		return true

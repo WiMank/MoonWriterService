@@ -205,7 +205,7 @@ func (rr *refreshRepository) refreshSession(access string, refresh string, entit
 func (rr *refreshRepository) createRefreshTokenResponse(entity *domain.SessionEntity, access string, refresh string) response.AppResponse {
 	return rr.responseCreator.CreateResponse(response.TokenResponse{
 		Message:      fmt.Sprintf("Tokens refreshed for [%s]", entity.UserName),
-		SessionId:    entity.Id,
+		SessionId:    0,
 		AccessToken:  access,
 		RefreshToken: refresh,
 	}, "")

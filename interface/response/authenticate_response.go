@@ -12,7 +12,7 @@ type TokenResponse struct {
 	Message      string `json:"message"`
 	Code         int    `json:"code"`
 	Desc         string `json:"desc"`
-	SessionId    string `json:"session_id"`
+	SessionId    int    `json:"session_id"`
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 }

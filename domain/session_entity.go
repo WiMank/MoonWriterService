@@ -1,12 +1,12 @@
 package domain
 
 type SessionEntity struct {
-	Id           string `bson:"_id"`
-	UserId       string `bson:"user_id"`
-	UserName     string `bson:"user_name"`
-	UserRole     string `bson:"user_role"`
-	AccessToken  string `bson:"access_token"`
-	RefreshToken string `bson:"refresh_token"`
-	LastVisit    int64  `bson:"last_visit"`
-	MobileKey    string `bson:"mobile_key"`
+	Id           string `db:"session_id"`
+	UserId       string `db:"user_id"`
+	UserName     string `db:"user_name"`
+	UserRole     string `db:"user_role"`
+	AccessToken  string `db:"access_token"`
+	RefreshToken string `db:"refresh_token"`
+	LastVisit    int64  `db:"last_visit"`
+	MobileKey    string `db:"mobile_key"`
 }

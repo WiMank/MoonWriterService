@@ -12,8 +12,8 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
+	"time"
 )
 
 type authRepository struct {
@@ -42,7 +42,8 @@ func (ar *authRepository) DecodeRequest(r *http.Request) request.AuthenticateUse
 func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponse {
 	if authReq.ValidateRequest(ar.validator) {
 
-		ar.checkSessionsCount(authReq)
+		go ar.checkSessionsCount(authReq)
+
 		localUserEntity, userExist := ar.findUserEntity(authReq)
 		passwordAndNameCorrect := localUserEntity.CheckUserNameAndPass(authReq.User)
 		sessionExist := ar.checkSessionExist(authReq.MobileKey)
@@ -60,7 +61,7 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 							return ar.responseCreator.CreateResponse(response.SessionUpdateFailedResponse{}, authReq.User.UserName)
 						}
 					} else {
-						insertResult, sessionInserted := ar.insertSession(accessToken, refreshToken, authReq, localUserEntity)
+						insertResult, sessionInserted := ar.insertSession(accessToken, refreshToken, authReq.MobileKey, localUserEntity)
 						if sessionInserted {
 							return ar.createNewTokenResponse(localUserEntity, insertResult, accessToken, refreshToken)
 						} else {
@@ -83,52 +84,50 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 
 func (ar *authRepository) findUserEntity(authReq request.AuthenticateUserRequest) (*domain.UserEntity, bool) {
 	var localUserEntity domain.UserEntity
-	/*userBson := bson.D{{"user_name", authReq.User.UserName}, {"user_pass", authReq.User.UserPass}}
-
-	if errFind := ar.collectionUsers.FindOne(utils.GetContext(), userBson).Decode(&localUserEntity); errFind != nil {
+	existQuery := "SELECT * FROM users WHERE user_name=$1"
+	err := ar.db.QueryRowx(existQuery, authReq.User.UserName).StructScan(&localUserEntity)
+	if err != nil {
 		return nil, false
-	}*/
-
+	}
 	return &localUserEntity, true
 }
 
 func (ar *authRepository) checkSessionExist(mk string) bool {
-	/*count, err := ar.collectionSessions.CountDocuments(utils.GetContext(), bson.M{"mobile_key": mk})
-
+	var exist bool
+	existQuery := "SELECT EXISTS (SELECT FROM sessions WHERE mobile_key=$1)::boolean"
+	err := ar.db.QueryRowx(existQuery, mk).Scan(&exist)
 	if err != nil {
-		return false
+		return true
 	}
-
-	if count != 1 {
-		return false
-	}
-	*/
-	return true
+	return exist
 }
 
 func (ar *authRepository) checkSessionsCount(authReq request.AuthenticateUserRequest) {
-	/*	userBson := bson.M{"user_name": authReq.User.UserName}
-		count, errCount := ar.collectionSessions.CountDocuments(utils.GetContext(), userBson)
+	var count int
+	countQuery := "SELECT count(*) FROM sessions WHERE user_name=$1"
+	err := ar.db.QueryRowx(countQuery, authReq.User.UserName).Scan(&count)
 
-		if count > 5 {
-			ar.clearSessions(userBson)
-		}
+	if err != nil {
+		log.Errorf("CheckSessionsCount error: \n", err)
+	}
 
-		if errCount != nil {
-			log.Errorf("CheckSessionsCount error: \n", errCount)
-		}*/
+	if count > 5 {
+		ar.clearSessions(authReq.User.UserName)
+	}
+
 }
 
-func (ar *authRepository) clearSessions(userBson bson.M) {
-	/*result, errDelete := ar.collectionSessions.DeleteMany(utils.GetContext(), userBson)
+func (ar *authRepository) clearSessions(userName string) {
+	clearSessionsExec := "DELETE FROM sessions WHERE user_name =$1"
+	result, err := ar.db.Exec(clearSessionsExec, userName)
 
-	if errDelete != nil {
-		log.Errorf("ClearSessions error: ", errDelete)
+	if err != nil {
+		log.Errorf("ClearSessions error: ", err)
 	}
 
 	if result != nil {
-		log.Info("Delete result: ", result.DeletedCount)
-	}*/
+		log.Info("Delete result: ", result)
+	}
 }
 
 func (ar *authRepository) createAccessToken(entity *domain.UserEntity) (string, bool) {
@@ -176,24 +175,22 @@ func (ar *authRepository) createRefreshToken(entity *domain.UserEntity) (string,
 	}
 }
 
-func (ar *authRepository) insertSession(access string, refresh string, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) (string, bool) {
-	/*	newSession := createSession(access, refresh, authReq, entity)
-		insertResult, errInsert := ar.collectionSessions.InsertOne(utils.GetContext(), bson.D{
-			{"user_id", newSession.UserId},
-			{"user_name", newSession.UserName},
-			{"user_role", newSession.UserRole},
-			{"access_token", newSession.AccessToken},
-			{"refresh_token", newSession.RefreshToken},
-			{"last_visit", newSession.LastVisit},
-			{"mobile_key", newSession.MobileKey},
-		})
+func (ar *authRepository) insertSession(
+	access string,
+	refresh string,
+	mk string,
+	entity *domain.UserEntity) (int, bool) {
 
-		if errInsert != nil {
-			return "", false
-		}
+	var id int
+	insertQuery := "INSERT INTO sessions as s (user_name, user_role, access_token, refresh_token, mobile_key, last_visit) " +
+		"VALUES ($1, $2, $3, $4, $5, $6) RETURNING s.session_id"
+	err := ar.db.QueryRowx(insertQuery, entity.UserName, entity.UserRole, access, refresh, mk, time.Now()).Scan(&id)
 
-		return insertResult.InsertedID.(primitive.ObjectID).Hex(), true*/
-	return "", false
+	if err != nil {
+		return 0, false
+	}
+
+	return id, true
 }
 
 func (ar *authRepository) updateSession(
@@ -201,47 +198,23 @@ func (ar *authRepository) updateSession(
 	refresh string,
 	entity *domain.UserEntity,
 	authReq request.AuthenticateUserRequest,
-) (string, bool) {
-	/*res := ar.collectionSessions.FindOneAndUpdate(
-		utils.GetContext(),
-		bson.D{
-			{"user_id", entity.Id},
-			{"user_name", entity.UserName},
-			{"mobile_key", authReq.MobileKey},
-		},
-		bson.D{{
-			"$set", bson.D{
-				{"access_token", access},
-				{"refresh_token", refresh},
-				{"last_visit", utils.GetCurrentTime()},
-			}}})
+) (int, bool) {
 
-	var findSession domain.SessionEntity
-	decodeResult := res.Decode(&findSession)
+	var id int
+	updateQuery := "UPDATE sessions as s SET (access_token, refresh_token, last_visit) = ($1, $2, $3)" +
+		" WHERE user_name=$4 AND mobile_key=$5 RETURNING s.session_id"
+	err := ar.db.QueryRowx(updateQuery, access, refresh, time.Now(), entity.UserName, authReq.MobileKey).Scan(&id)
 
-	if decodeResult != nil {
-		return "", false
+	if err != nil {
+		return 0, false
 	}
 
-	return findSession.Id, true*/
-	return "", false
-}
-
-func createSession(access string, refresh string, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) domain.SessionEntity {
-	return domain.SessionEntity{
-		UserId:       entity.Id,
-		UserName:     authReq.User.UserName,
-		UserRole:     entity.UserRole,
-		AccessToken:  access,
-		RefreshToken: refresh,
-		LastVisit:    utils.GetCurrentTime(),
-		MobileKey:    authReq.MobileKey,
-	}
+	return id, true
 }
 
 func (ar *authRepository) createUpdateTokenResponse(
 	user *domain.UserEntity,
-	sessionId string,
+	sessionId int,
 	accessToken string,
 	refreshToken string) response.AppResponse {
 	return ar.responseCreator.CreateResponse(response.TokenResponse{
@@ -253,7 +226,7 @@ func (ar *authRepository) createUpdateTokenResponse(
 
 func (ar *authRepository) createNewTokenResponse(
 	user *domain.UserEntity,
-	sessionId string,
+	sessionId int,
 	accessToken string,
 	refreshToken string) response.AppResponse {
 	return ar.responseCreator.CreateResponse(response.TokenResponse{
