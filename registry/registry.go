@@ -3,11 +3,11 @@ package registry
 import (
 	"github.com/WiMank/MoonWriterService/interface/controller"
 	"github.com/go-playground/validator/v10"
-	"go.mongodb.org/mongo-driver/mongo"
+	"github.com/jmoiron/sqlx"
 )
 
 type registry struct {
-	db        *mongo.Database
+	db        *sqlx.DB
 	validator *validator.Validate
 }
 
@@ -15,7 +15,7 @@ type Registry interface {
 	NewAppController() controller.AppController
 }
 
-func NewRegistry(db *mongo.Database, validator *validator.Validate) Registry {
+func NewRegistry(db *sqlx.DB, validator *validator.Validate) Registry {
 	return &registry{db, validator}
 }
 

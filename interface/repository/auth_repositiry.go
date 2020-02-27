@@ -10,18 +10,16 @@ import (
 	"github.com/WiMank/MoonWriterService/interface/utils"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-playground/validator/v10"
+	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 )
 
 type authRepository struct {
-	collectionUsers    *mongo.Collection
-	collectionSessions *mongo.Collection
-	responseCreator    response.AppResponseCreator
-	validator          *validator.Validate
+	db              *sqlx.DB
+	responseCreator response.AppResponseCreator
+	validator       *validator.Validate
 }
 
 type AuthRepository interface {
@@ -29,8 +27,8 @@ type AuthRepository interface {
 	AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponse
 }
 
-func NewAuthRepository(collectionUsers *mongo.Collection, collectionSessions *mongo.Collection, responseCreator response.AppResponseCreator, validator *validator.Validate) AuthRepository {
-	return &authRepository{collectionUsers, collectionSessions, responseCreator, validator}
+func NewAuthRepository(db *sqlx.DB, responseCreator response.AppResponseCreator, validator *validator.Validate) AuthRepository {
+	return &authRepository{db, responseCreator, validator}
 }
 
 func (ar *authRepository) DecodeRequest(r *http.Request) request.AuthenticateUserRequest {
@@ -85,17 +83,17 @@ func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserReque
 
 func (ar *authRepository) findUserEntity(authReq request.AuthenticateUserRequest) (*domain.UserEntity, bool) {
 	var localUserEntity domain.UserEntity
-	userBson := bson.D{{"user_name", authReq.User.UserName}, {"user_pass", authReq.User.UserPass}}
+	/*userBson := bson.D{{"user_name", authReq.User.UserName}, {"user_pass", authReq.User.UserPass}}
 
 	if errFind := ar.collectionUsers.FindOne(utils.GetContext(), userBson).Decode(&localUserEntity); errFind != nil {
 		return nil, false
-	}
+	}*/
 
 	return &localUserEntity, true
 }
 
 func (ar *authRepository) checkSessionExist(mk string) bool {
-	count, err := ar.collectionSessions.CountDocuments(utils.GetContext(), bson.M{"mobile_key": mk})
+	/*count, err := ar.collectionSessions.CountDocuments(utils.GetContext(), bson.M{"mobile_key": mk})
 
 	if err != nil {
 		return false
@@ -104,25 +102,25 @@ func (ar *authRepository) checkSessionExist(mk string) bool {
 	if count != 1 {
 		return false
 	}
-
+	*/
 	return true
 }
 
 func (ar *authRepository) checkSessionsCount(authReq request.AuthenticateUserRequest) {
-	userBson := bson.M{"user_name": authReq.User.UserName}
-	count, errCount := ar.collectionSessions.CountDocuments(utils.GetContext(), userBson)
+	/*	userBson := bson.M{"user_name": authReq.User.UserName}
+		count, errCount := ar.collectionSessions.CountDocuments(utils.GetContext(), userBson)
 
-	if count > 5 {
-		ar.clearSessions(userBson)
-	}
+		if count > 5 {
+			ar.clearSessions(userBson)
+		}
 
-	if errCount != nil {
-		log.Errorf("CheckSessionsCount error: \n", errCount)
-	}
+		if errCount != nil {
+			log.Errorf("CheckSessionsCount error: \n", errCount)
+		}*/
 }
 
 func (ar *authRepository) clearSessions(userBson bson.M) {
-	result, errDelete := ar.collectionSessions.DeleteMany(utils.GetContext(), userBson)
+	/*result, errDelete := ar.collectionSessions.DeleteMany(utils.GetContext(), userBson)
 
 	if errDelete != nil {
 		log.Errorf("ClearSessions error: ", errDelete)
@@ -130,7 +128,7 @@ func (ar *authRepository) clearSessions(userBson bson.M) {
 
 	if result != nil {
 		log.Info("Delete result: ", result.DeletedCount)
-	}
+	}*/
 }
 
 func (ar *authRepository) createAccessToken(entity *domain.UserEntity) (string, bool) {
@@ -179,22 +177,23 @@ func (ar *authRepository) createRefreshToken(entity *domain.UserEntity) (string,
 }
 
 func (ar *authRepository) insertSession(access string, refresh string, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) (string, bool) {
-	newSession := createSession(access, refresh, authReq, entity)
-	insertResult, errInsert := ar.collectionSessions.InsertOne(utils.GetContext(), bson.D{
-		{"user_id", newSession.UserId},
-		{"user_name", newSession.UserName},
-		{"user_role", newSession.UserRole},
-		{"access_token", newSession.AccessToken},
-		{"refresh_token", newSession.RefreshToken},
-		{"last_visit", newSession.LastVisit},
-		{"mobile_key", newSession.MobileKey},
-	})
+	/*	newSession := createSession(access, refresh, authReq, entity)
+		insertResult, errInsert := ar.collectionSessions.InsertOne(utils.GetContext(), bson.D{
+			{"user_id", newSession.UserId},
+			{"user_name", newSession.UserName},
+			{"user_role", newSession.UserRole},
+			{"access_token", newSession.AccessToken},
+			{"refresh_token", newSession.RefreshToken},
+			{"last_visit", newSession.LastVisit},
+			{"mobile_key", newSession.MobileKey},
+		})
 
-	if errInsert != nil {
-		return "", false
-	}
+		if errInsert != nil {
+			return "", false
+		}
 
-	return insertResult.InsertedID.(primitive.ObjectID).Hex(), true
+		return insertResult.InsertedID.(primitive.ObjectID).Hex(), true*/
+	return "", false
 }
 
 func (ar *authRepository) updateSession(
@@ -203,7 +202,7 @@ func (ar *authRepository) updateSession(
 	entity *domain.UserEntity,
 	authReq request.AuthenticateUserRequest,
 ) (string, bool) {
-	res := ar.collectionSessions.FindOneAndUpdate(
+	/*res := ar.collectionSessions.FindOneAndUpdate(
 		utils.GetContext(),
 		bson.D{
 			{"user_id", entity.Id},
@@ -224,7 +223,8 @@ func (ar *authRepository) updateSession(
 		return "", false
 	}
 
-	return findSession.Id, true
+	return findSession.Id, true*/
+	return "", false
 }
 
 func createSession(access string, refresh string, authReq request.AuthenticateUserRequest, entity *domain.UserEntity) domain.SessionEntity {

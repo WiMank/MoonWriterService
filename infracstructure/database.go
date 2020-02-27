@@ -1,37 +1,36 @@
 package infracstructure
 
 import (
-	"context"
 	"fmt"
 	"github.com/WiMank/MoonWriterService/config"
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
-	"time"
 )
 
 //Настраиваем подключение к БД
-func NewDataBase(config config.Configuration) *mongo.Database {
+func NewDataBase(config config.Configuration) *sqlx.DB {
 	connStr := fmt.Sprintf(
-		"mongodb://%s:%d",
+		"user=%s password=%s dbname=%s sslmode=%s host=%s port=%d",
+		config.DataBase.User,
+		config.DataBase.Password,
+		config.DataBase.Dbname,
+		config.DataBase.Sslmode,
 		config.DataBase.Host,
 		config.DataBase.Port,
 	)
 
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connStr))
+	db, err := sqlx.Open(config.DataBase.Driver, connStr)
 	if err != nil {
-		panic(fmt.Errorf("Connect to database response: %s \n", err))
+		panic(fmt.Errorf("Error opening database: %s \n", err))
 	}
 
-	errPing := client.Ping(ctx, readpref.Primary())
-	if errPing != nil {
-		panic(fmt.Errorf("Ping response: %s \n", err))
+	err = db.Ping()
+	if err != nil {
+		panic(fmt.Errorf("Ping error: %s \n", err))
 	}
 
 	log.Info("Successfully connected to the database!")
 
-	return client.Database(config.DataBase.Dbname)
+	return db
 }

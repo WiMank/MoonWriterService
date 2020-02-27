@@ -10,17 +10,15 @@ import (
 	"github.com/WiMank/MoonWriterService/interface/utils"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-playground/validator/v10"
+	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 )
 
 type refreshRepository struct {
-	collectionSessions *mongo.Collection
-	responseCreator    response.AppResponseCreator
-	validator          *validator.Validate
+	db              *sqlx.DB
+	responseCreator response.AppResponseCreator
+	validator       *validator.Validate
 }
 
 type RefreshRepository interface {
@@ -29,11 +27,11 @@ type RefreshRepository interface {
 }
 
 func NewRefreshRepository(
-	collectionSessions *mongo.Collection,
+	db *sqlx.DB,
 	responseCreator response.AppResponseCreator,
 	validator *validator.Validate) RefreshRepository {
 	return &refreshRepository{
-		collectionSessions,
+		db,
 		responseCreator,
 		validator,
 	}
@@ -79,7 +77,7 @@ func (rr *refreshRepository) Refresh(request request.RefreshTokensRequest) respo
 }
 
 func (rr *refreshRepository) findSession(request request.RefreshTokensRequest) (*domain.SessionEntity, bool) {
-	id, errHex := primitive.ObjectIDFromHex(request.Refresh.SessionId)
+	/*id, errHex := primitive.ObjectIDFromHex(request.Refresh.SessionId)
 
 	if errHex != nil {
 		return nil, false
@@ -96,7 +94,9 @@ func (rr *refreshRepository) findSession(request request.RefreshTokensRequest) (
 		return nil, false
 	}
 
-	return &localSession, true
+	return &localSession, true*/
+
+	return nil, false
 }
 
 func (rr *refreshRepository) validateToken(refreshToken string) bool {
@@ -167,7 +167,7 @@ func (rr *refreshRepository) createRefreshToken(entity *domain.SessionEntity) (s
 }
 
 func (rr *refreshRepository) refreshSession(access string, refresh string, entity *domain.SessionEntity) bool {
-	if entity != nil {
+	/*if entity != nil {
 
 		id, errHex := primitive.ObjectIDFromHex(entity.Id)
 
@@ -197,7 +197,9 @@ func (rr *refreshRepository) refreshSession(access string, refresh string, entit
 
 	} else {
 		return false
-	}
+	}*/
+
+	return false
 }
 
 func (rr *refreshRepository) createRefreshTokenResponse(entity *domain.SessionEntity, access string, refresh string) response.AppResponse {

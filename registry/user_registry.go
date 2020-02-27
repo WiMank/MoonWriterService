@@ -17,7 +17,7 @@ func (r *registry) CreateUserInteractor() usecase.RegistrationInteractor {
 
 func (r *registry) CreateUserRepository() repository.RegistrationRepository {
 	return repository.NewUserRepository(
-		r.db.Collection("users"),
+		r.db,
 		r.CreateAppResponseCreator(),
 		r.validator,
 	)

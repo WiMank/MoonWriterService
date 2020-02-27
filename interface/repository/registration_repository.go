@@ -5,16 +5,14 @@ import (
 	"github.com/WiMank/MoonWriterService/domain"
 	"github.com/WiMank/MoonWriterService/interface/request"
 	"github.com/WiMank/MoonWriterService/interface/response"
-	"github.com/WiMank/MoonWriterService/interface/utils"
 	"github.com/go-playground/validator/v10"
+	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 )
 
 type registrationRepository struct {
-	collectionUsers *mongo.Collection
+	db              *sqlx.DB
 	responseCreator response.AppResponseCreator
 	validator       *validator.Validate
 }
@@ -25,11 +23,11 @@ type RegistrationRepository interface {
 }
 
 func NewUserRepository(
-	collectionUsers *mongo.Collection,
+	db *sqlx.DB,
 	responseCreator response.AppResponseCreator,
 	validator *validator.Validate,
 ) RegistrationRepository {
-	return &registrationRepository{collectionUsers, responseCreator, validator}
+	return &registrationRepository{db, responseCreator, validator}
 }
 
 func (ur *registrationRepository) DecodeRequest(r *http.Request) request.UserRegistrationRequest {
@@ -63,35 +61,26 @@ func (ur *registrationRepository) InsertUser(request request.UserRegistrationReq
 }
 
 func (ur *registrationRepository) findUserEntity(authReq request.UserRegistrationRequest) bool {
-	count, err := ur.collectionUsers.CountDocuments(utils.GetContext(),
-		bson.D{
-			{"user_name", authReq.User.UserName},
-			{"user_pass", authReq.User.UserPass},
-		})
-
+	var exist bool
+	existQuery := "SELECT EXISTS (SELECT FROM users WHERE user_name=$1)::boolean"
+	err := ur.db.QueryRowx(existQuery, authReq.User.UserName).Scan(&exist)
 	if err != nil {
-		return false
+		log.Error("findUserEntity: ", err)
+		return true
 	}
-
-	if count != 1 {
-		return false
-	}
-
-	return true
+	return exist
 }
 
 func (ur *registrationRepository) insertUserEntity(entity *domain.UserEntity) bool {
-	_, err := ur.collectionUsers.InsertOne(utils.GetContext(),
-		bson.D{
-			{"user_name", entity.UserName},
-			{"user_pass", entity.UserPass},
-			{"user_role", "user"},
-			{"is_premium_user", false},
-		})
-
+	insertQuery := "INSERT INTO users (user_name, user_pass, user_role, premium) VALUES ($1, $2, 'user', false)"
+	result, err := ur.db.Exec(insertQuery, entity.UserName, entity.UserPass)
 	if err != nil {
 		return false
 	}
 
-	return true
+	if result != nil {
+		return true
+	}
+
+	return false
 }

@@ -1,11 +1,11 @@
 package domain
 
 type UserEntity struct {
-	Id            string `bson:"_id" json:"-"`
-	UserName      string `bson:"user_name" json:"user_name" validate:"required,gte=2,lte=25"`
-	UserPass      string `bson:"user_pass" json:"user_pass" validate:"required,gte=6,lte=50"`
-	UserRole      string `bson:"user_role" json:"-"`
-	IsPremiumUser bool   `bson:"is_premium_user" json:"-"`
+	Id            string `db:"_id" json:"-"`
+	UserName      string `db:"user_name" json:"user_name" validate:"required,gte=2,lte=25"`
+	UserPass      string `db:"user_pass" json:"user_pass" validate:"required,gte=6,lte=50"`
+	UserRole      string `db:"user_role" json:"-"`
+	IsPremiumUser bool   `db:"premium" json:"-"`
 }
 
 func (ue *UserEntity) CheckUserExist(newUser UserEntity) bool {

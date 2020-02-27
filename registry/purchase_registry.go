@@ -17,9 +17,7 @@ func (r *registry) CreatePurchaseInteractor() usecase.PurchaseInteractor {
 
 func (r *registry) CreatePurchaseRepository() repository.PurchaseRepository {
 	return repository.NewPurchaseRepository(
-		r.db.Collection("users"),
-		r.db.Collection("sessions"),
-		r.db.Collection("purchase"),
+		r.db,
 		r.CreateAppResponseCreator(),
 		r.validator,
 	)

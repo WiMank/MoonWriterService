@@ -1,10 +1,11 @@
 database:
-  user: _
-  password: _
-  dbname: moon_writer_database
+  user: postgres
+  password: korabl
+  dbname: moon_writer
+  addr: 127.0.0.1:5432
   host: localhost
-  port: 27017
-  driver: mongo
+  port: 5432
+  driver: postgres
   sslmode: disable
 log:
   forcecolors: true

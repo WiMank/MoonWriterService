@@ -17,7 +17,7 @@ func (r *registry) CreateRefreshInteractor() usecase.RefreshInteractor {
 
 func (r *registry) CreateRefreshRepository() repository.RefreshRepository {
 	return repository.NewRefreshRepository(
-		r.db.Collection("sessions"),
+		r.db,
 		r.CreateAppResponseCreator(),
 		r.validator,
 	)

@@ -7,14 +7,11 @@ import (
 	"github.com/WiMank/MoonWriterService/domain"
 	"github.com/WiMank/MoonWriterService/interface/request"
 	"github.com/WiMank/MoonWriterService/interface/response"
-	"github.com/WiMank/MoonWriterService/interface/utils"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-playground/validator/v10"
+	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/net/context"
 	"google.golang.org/api/androidpublisher/v3"
 	"google.golang.org/api/option"
@@ -22,11 +19,9 @@ import (
 )
 
 type purchaseRepository struct {
-	collectionUsers    *mongo.Collection
-	collectionSessions *mongo.Collection
-	collectionPurchase *mongo.Collection
-	responseCreator    response.AppResponseCreator
-	validator          *validator.Validate
+	db              *sqlx.DB
+	responseCreator response.AppResponseCreator
+	validator       *validator.Validate
 }
 
 type PurchaseRepository interface {
@@ -37,16 +32,12 @@ type PurchaseRepository interface {
 }
 
 func NewPurchaseRepository(
-	collectionUsers *mongo.Collection,
-	collectionSessions *mongo.Collection,
-	collectionPurchase *mongo.Collection,
+	db *sqlx.DB,
 	responseCreator response.AppResponseCreator,
 	validator *validator.Validate,
 ) PurchaseRepository {
 	return &purchaseRepository{
-		collectionUsers,
-		collectionSessions,
-		collectionPurchase,
+		db,
 		responseCreator,
 		validator,
 	}
@@ -156,28 +147,28 @@ func (pr *purchaseRepository) validateAccessToken(accessToken string) (string, b
 }
 
 func (pr *purchaseRepository) checkFreeUserExist(userId string) (*domain.UserEntity, bool) {
-	id, errHex := primitive.ObjectIDFromHex(userId)
+	/*	id, errHex := primitive.ObjectIDFromHex(userId)
 
-	if errHex != nil {
-		return nil, false
-	}
+		if errHex != nil {
+			return nil, false
+		}
 
-	var localUser domain.UserEntity
-	err := pr.collectionUsers.FindOne(utils.GetContext(), bson.D{{"_id", id}}).Decode(&localUser)
+		var localUser domain.UserEntity
+		err := pr.collectionUsers.FindOne(utils.GetContext(), bson.D{{"_id", id}}).Decode(&localUser)
 
-	if err != nil {
-		return nil, false
-	}
+		if err != nil {
+			return nil, false
+		}
 
-	if (localUser.Id == userId) && (!localUser.IsPremiumUser) {
-		return &localUser, true
-	}
+		if (localUser.Id == userId) && (!localUser.IsPremiumUser) {
+			return &localUser, true
+		}*/
 
 	return nil, false
 }
 
 func (pr *purchaseRepository) checkUserExist(userId string) (*domain.UserEntity, bool) {
-	id, errHex := primitive.ObjectIDFromHex(userId)
+	/*id, errHex := primitive.ObjectIDFromHex(userId)
 
 	if errHex != nil {
 		return nil, false
@@ -190,11 +181,12 @@ func (pr *purchaseRepository) checkUserExist(userId string) (*domain.UserEntity,
 		return nil, false
 	}
 
-	return &localUser, true
+	return &localUser, true*/
+	return nil, false
 }
 
 func (pr *purchaseRepository) checkPurchaseTokenNonExist(purchaseToken string) bool {
-	count, err := pr.collectionPurchase.CountDocuments(
+	/*count, err := pr.collectionPurchase.CountDocuments(
 		utils.GetContext(),
 		bson.D{{"purchase_token", purchaseToken}})
 
@@ -204,29 +196,29 @@ func (pr *purchaseRepository) checkPurchaseTokenNonExist(purchaseToken string) b
 
 	if count == 1 {
 		return false
-	}
+	}*/
 
 	return true
 }
 
 func (pr *purchaseRepository) checkAccessTokenExist(accessToken string) bool {
-	count, err := pr.collectionSessions.CountDocuments(
-		utils.GetContext(),
-		bson.D{{"access_token", accessToken}})
+	/*	count, err := pr.collectionSessions.CountDocuments(
+			utils.GetContext(),
+			bson.D{{"access_token", accessToken}})
 
-	if err != nil {
-		return false
-	}
+		if err != nil {
+			return false
+		}
 
-	if count == 1 {
-		return true
-	}
-
+		if count == 1 {
+			return true
+		}
+	*/
 	return false
 }
 
 func (pr *purchaseRepository) insertPurchase(userId string, request request.PurchaseRegisterRequest) bool {
-	_, err := pr.collectionPurchase.InsertOne(utils.GetContext(), bson.D{
+	/*_, err := pr.collectionPurchase.InsertOne(utils.GetContext(), bson.D{
 		{"user_id", userId},
 		{"is_premium_user", true},
 		{"purchase_token", request.Purchase.PurchaseToken},
@@ -253,13 +245,13 @@ func (pr *purchaseRepository) insertPurchase(userId string, request request.Purc
 
 	if errUpdate != nil {
 		return false
-	}
+	}*/
 
 	return true
 }
 
 func (pr *purchaseRepository) checkPurchaseExist(user *domain.UserEntity) (*domain.Purchase, bool) {
-	if user != nil {
+	/*	if user != nil {
 		var localPurchase domain.Purchase
 		errFind := pr.collectionPurchase.FindOne(
 			utils.GetContext(),
@@ -270,7 +262,7 @@ func (pr *purchaseRepository) checkPurchaseExist(user *domain.UserEntity) (*doma
 		}
 
 		return &localPurchase, true
-	}
+	}*/
 
 	return nil, false
 }

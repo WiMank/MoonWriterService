@@ -18,8 +18,7 @@ func (r *registry) CreateAuthInteractor() usecase.AuthInteractor {
 
 func (r *registry) CreateAuthRepository() repository.AuthRepository {
 	return repository.NewAuthRepository(
-		r.db.Collection("users"),
-		r.db.Collection("sessions"),
+		r.db,
 		r.CreateAppResponseCreator(),
 		r.validator,
 	)
