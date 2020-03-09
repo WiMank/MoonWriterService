@@ -3,6 +3,7 @@ package usecase
 import (
 	"github.com/WiMank/MoonWriterService/interface/presenter"
 	"github.com/WiMank/MoonWriterService/interface/repository"
+	"github.com/WiMank/MoonWriterService/interface/request"
 	"net/http"
 )
 
@@ -20,7 +21,9 @@ func NewAuthInteractor(repository repository.AuthRepository, presenter presenter
 }
 
 func (ai *authInteractor) Authenticate(w http.ResponseWriter, r *http.Request) {
-	decodeResult := ai.repository.DecodeRequest(r)
-	responseAuth := ai.repository.AuthenticateUser(decodeResult)
+	var authRequest request.AuthenticateUserRequest
+	authRequest.DecodeAuthenticateUserRequest(r)
+
+	responseAuth := ai.repository.AuthenticateUser(authRequest)
 	ai.presenter.AuthResponse(w, responseAuth)
 }

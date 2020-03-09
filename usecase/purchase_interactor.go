@@ -3,6 +3,7 @@ package usecase
 import (
 	"github.com/WiMank/MoonWriterService/interface/presenter"
 	"github.com/WiMank/MoonWriterService/interface/repository"
+	"github.com/WiMank/MoonWriterService/interface/request"
 	"net/http"
 )
 
@@ -21,13 +22,17 @@ func NewPurchaseInteractor(repository repository.PurchaseRepository, presenter p
 }
 
 func (pi *purchaseInteractor) InsertPurchase(w http.ResponseWriter, r *http.Request) {
-	decodeResult := pi.repository.DecodePurchaseRegisterRequest(r)
-	registerPurchase := pi.repository.RegisterPurchase(decodeResult)
+	var purchaseRegisterRequest request.PurchaseRegisterRequest
+	purchaseRegisterRequest.DecodePurchaseRegisterRequest(r)
+
+	registerPurchase := pi.repository.RegisterPurchase(purchaseRegisterRequest)
 	pi.presenter.PurchaseResponse(w, registerPurchase)
 }
 
 func (pi *purchaseInteractor) CheckPurchase(w http.ResponseWriter, r *http.Request) {
-	decodeResult := pi.repository.DecodeVerificationRequest(r)
-	purchaseVerification := pi.repository.VerificationPurchase(decodeResult)
+	var purchaseVerificationRequest request.PurchaseVerificationRequest
+	purchaseVerificationRequest.DecodeVerificationRequest(r)
+
+	purchaseVerification := pi.repository.VerificationPurchase(purchaseVerificationRequest)
 	pi.presenter.PurchaseResponse(w, purchaseVerification)
 }

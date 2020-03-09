@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/WiMank/MoonWriterService/config"
 	"github.com/WiMank/MoonWriterService/domain"
@@ -26,8 +25,6 @@ type purchaseRepository struct {
 }
 
 type PurchaseRepository interface {
-	DecodePurchaseRegisterRequest(r *http.Request) request.PurchaseRegisterRequest
-	DecodeVerificationRequest(r *http.Request) request.PurchaseVerificationRequest
 	RegisterPurchase(request request.PurchaseRegisterRequest) response.AppResponse
 	VerificationPurchase(request request.PurchaseVerificationRequest) response.AppResponse
 }
@@ -42,22 +39,6 @@ func NewPurchaseRepository(
 		responseCreator,
 		validator,
 	}
-}
-
-func (pr *purchaseRepository) DecodePurchaseRegisterRequest(r *http.Request) request.PurchaseRegisterRequest {
-	var purchaseRegisterRequest request.PurchaseRegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&purchaseRegisterRequest); err != nil {
-		log.Errorf("DecodePurchaseRegisterRequest error:\n", err)
-	}
-	return purchaseRegisterRequest
-}
-
-func (pr *purchaseRepository) DecodeVerificationRequest(r *http.Request) request.PurchaseVerificationRequest {
-	var purchaseVerificationRequest request.PurchaseVerificationRequest
-	if err := json.NewDecoder(r.Body).Decode(&purchaseVerificationRequest); err != nil {
-		log.Errorf("DecodeVerificationRequest error:\n", err)
-	}
-	return purchaseVerificationRequest
 }
 
 func (pr *purchaseRepository) RegisterPurchase(request request.PurchaseRegisterRequest) response.AppResponse {

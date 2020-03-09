@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/WiMank/MoonWriterService/config"
 	"github.com/WiMank/MoonWriterService/domain"
@@ -11,9 +10,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-playground/validator/v10"
 	"github.com/jmoiron/sqlx"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
-	"net/http"
 	"time"
 )
 
@@ -24,7 +21,6 @@ type refreshRepository struct {
 }
 
 type RefreshRepository interface {
-	DecodeRequest(r *http.Request) request.RefreshTokensRequest
 	Refresh(request request.RefreshTokensRequest) response.AppResponse
 }
 
@@ -37,14 +33,6 @@ func NewRefreshRepository(
 		responseCreator,
 		validator,
 	}
-}
-
-func (rr *refreshRepository) DecodeRequest(r *http.Request) request.RefreshTokensRequest {
-	var refreshTokensRequest request.RefreshTokensRequest
-	if err := json.NewDecoder(r.Body).Decode(&refreshTokensRequest); err != nil {
-		log.Errorf("Decode RefreshTokensRequest error:\n", err)
-	}
-	return refreshTokensRequest
 }
 
 func (rr *refreshRepository) Refresh(request request.RefreshTokensRequest) response.AppResponse {

@@ -1,8 +1,10 @@
 package request
 
 import (
+	"encoding/json"
 	"github.com/go-playground/validator/v10"
 	log "github.com/sirupsen/logrus"
+	"net/http"
 )
 
 type RefreshTokensRequest struct {
@@ -13,8 +15,14 @@ type RefreshTokensRequest struct {
 	} `json:"refresh"`
 }
 
-func (req *RefreshTokensRequest) ValidateRequest(validator *validator.Validate) bool {
-	err := validator.Struct(req)
+func (rtr *RefreshTokensRequest) DecodeRefreshTokensRequest(r *http.Request) {
+	if err := json.NewDecoder(r.Body).Decode(&rtr); err != nil {
+		log.Errorf("Decode RefreshTokensRequest error:\n", err)
+	}
+}
+
+func (rtr *RefreshTokensRequest) ValidateRequest(validator *validator.Validate) bool {
+	err := validator.Struct(rtr)
 	if err != nil {
 		log.Errorf("RefreshTokensRequest validate error: ", err)
 		return false

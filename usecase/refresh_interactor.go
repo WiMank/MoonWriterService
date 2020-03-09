@@ -3,6 +3,7 @@ package usecase
 import (
 	"github.com/WiMank/MoonWriterService/interface/presenter"
 	"github.com/WiMank/MoonWriterService/interface/repository"
+	"github.com/WiMank/MoonWriterService/interface/request"
 	"net/http"
 )
 
@@ -20,7 +21,9 @@ func NewRefreshInteractor(repository repository.RefreshRepository, presenter pre
 }
 
 func (ri *refreshInteractor) Refresh(w http.ResponseWriter, r *http.Request) {
-	decodeResult := ri.repository.DecodeRequest(r)
-	response := ri.repository.Refresh(decodeResult)
+	var refreshTokensRequest request.RefreshTokensRequest
+	refreshTokensRequest.DecodeRefreshTokensRequest(r)
+
+	response := ri.repository.Refresh(refreshTokensRequest)
 	ri.presenter.RefreshResponse(w, response)
 }

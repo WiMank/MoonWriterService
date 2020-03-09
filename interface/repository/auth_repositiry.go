@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/WiMank/MoonWriterService/config"
 	"github.com/WiMank/MoonWriterService/domain"
@@ -12,7 +11,6 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
-	"net/http"
 )
 
 type authRepository struct {
@@ -22,20 +20,11 @@ type authRepository struct {
 }
 
 type AuthRepository interface {
-	DecodeRequest(r *http.Request) request.AuthenticateUserRequest
 	AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponse
 }
 
 func NewAuthRepository(db *sqlx.DB, responseCreator response.AppResponseCreator, validator *validator.Validate) AuthRepository {
 	return &authRepository{db, responseCreator, validator}
-}
-
-func (ar *authRepository) DecodeRequest(r *http.Request) request.AuthenticateUserRequest {
-	var requestUser request.AuthenticateUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&requestUser); err != nil {
-		log.Errorf("Decode User response error:\n", err)
-	}
-	return requestUser
 }
 
 func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponse {

@@ -3,6 +3,7 @@ package usecase
 import (
 	"github.com/WiMank/MoonWriterService/interface/presenter"
 	"github.com/WiMank/MoonWriterService/interface/repository"
+	"github.com/WiMank/MoonWriterService/interface/request"
 	"net/http"
 )
 
@@ -20,7 +21,9 @@ func NewRegistrationInteractor(repository repository.RegistrationRepository, pre
 }
 
 func (ui *registrationInteractor) Insert(w http.ResponseWriter, r *http.Request) {
-	decodeResult := ui.repository.DecodeRequest(r)
-	insertResponse := ui.repository.InsertUser(decodeResult)
+	var userRegistrationRequest request.UserRegistrationRequest
+	userRegistrationRequest.DecodeUserRegistrationRequest(r)
+
+	insertResponse := ui.repository.InsertUser(userRegistrationRequest)
 	ui.presenter.RegistrationResponse(w, insertResponse)
 }

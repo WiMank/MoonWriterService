@@ -1,14 +1,12 @@
 package repository
 
 import (
-	"encoding/json"
 	"github.com/WiMank/MoonWriterService/domain"
 	"github.com/WiMank/MoonWriterService/interface/request"
 	"github.com/WiMank/MoonWriterService/interface/response"
 	"github.com/go-playground/validator/v10"
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
-	"net/http"
 )
 
 type registrationRepository struct {
@@ -18,7 +16,6 @@ type registrationRepository struct {
 }
 
 type RegistrationRepository interface {
-	DecodeRequest(r *http.Request) request.UserRegistrationRequest
 	InsertUser(request request.UserRegistrationRequest) response.AppResponse
 }
 
@@ -28,16 +25,6 @@ func NewUserRepository(
 	validator *validator.Validate,
 ) RegistrationRepository {
 	return &registrationRepository{db, responseCreator, validator}
-}
-
-func (ur *registrationRepository) DecodeRequest(r *http.Request) request.UserRegistrationRequest {
-	var requestUser request.UserRegistrationRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&requestUser); err != nil {
-		log.Error("Decode User response error! ", err)
-	}
-
-	return requestUser
 }
 
 func (ur *registrationRepository) InsertUser(request request.UserRegistrationRequest) response.AppResponse {
