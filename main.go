@@ -13,5 +13,4 @@ func main() {
 	validator := infracstructure.InitValidator()
 	appController := registry.NewRegistry(db, validator).NewAppController()
 	infracstructure.NewRouter(appController)
-
 }

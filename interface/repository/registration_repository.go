@@ -29,7 +29,6 @@ func NewUserRepository(
 
 func (ur *registrationRepository) InsertUser(request request.UserRegistrationRequest) response.AppResponse {
 	if request.ValidateRequest(ur.validator) {
-
 		userExist := ur.findUserEntity(request)
 
 		if !userExist {
@@ -51,16 +50,19 @@ func (ur *registrationRepository) findUserEntity(authReq request.UserRegistratio
 	var exist bool
 	existQuery := "SELECT EXISTS (SELECT FROM users WHERE user_name=$1 AND user_pass=$2)::boolean"
 	err := ur.db.QueryRowx(existQuery, authReq.User.UserName, authReq.User.UserPass).Scan(&exist)
+
 	if err != nil {
 		log.Error("findUserEntity: ", err)
 		return true
 	}
+
 	return exist
 }
 
 func (ur *registrationRepository) insertUserEntity(entity *domain.UserEntity) bool {
 	insertQuery := "INSERT INTO users (user_name, user_pass, user_role, premium) VALUES ($1, $2, 'user', false)"
 	result, err := ur.db.Exec(insertQuery, entity.UserName, entity.UserPass)
+
 	if err != nil {
 		return false
 	}

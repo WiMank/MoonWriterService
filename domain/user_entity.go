@@ -9,13 +9,11 @@ type UserEntity struct {
 
 func (ue *UserEntity) CheckUserExist(newUser UserEntity) bool {
 	if ue != nil {
-
 		if ue.UserName == newUser.UserName {
 			return true
 		} else {
 			return false
 		}
-
 	} else {
 		return false
 	}
@@ -23,13 +21,11 @@ func (ue *UserEntity) CheckUserExist(newUser UserEntity) bool {
 
 func (ue *UserEntity) CheckUserNameAndPass(newUser UserEntity) bool {
 	if ue != nil {
-
 		if (ue.UserName == newUser.UserName) && (ue.UserPass == newUser.UserPass) {
 			return true
 		} else {
 			return false
 		}
-
 	} else {
 		return false
 	}

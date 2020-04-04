@@ -34,18 +34,13 @@ func NewPurchaseRepository(
 	responseCreator response.AppResponseCreator,
 	validator *validator.Validate,
 ) PurchaseRepository {
-	return &purchaseRepository{
-		db,
-		responseCreator,
-		validator,
-	}
+	return &purchaseRepository{db, responseCreator, validator}
 }
 
 func (pr *purchaseRepository) RegisterPurchase(request request.PurchaseRegisterRequest) response.AppResponse {
 	if request.ValidateRequest(pr.validator) {
-
 		accessTokenExist := pr.checkAccessTokenExistInSession(request.Purchase.AccessToken)
-		userId, accessTokenValid := pr.validateAccessToken(request.Purchase.AccessToken)
+		userId, accessTokenValid := validateAccessToken(request.Purchase.AccessToken)
 		localUser, userExist := pr.checkUserExist(userId)
 
 		if accessTokenExist {
@@ -77,10 +72,10 @@ func (pr *purchaseRepository) RegisterPurchase(request request.PurchaseRegisterR
 func (pr *purchaseRepository) VerificationPurchase(request request.PurchaseVerificationRequest) response.AppResponse {
 	if request.ValidateRequest(pr.validator) {
 		accessTokenExist := pr.checkAccessTokenExistInSession(request.Purchase.AccessToken)
-		userId, accessTokenValid := pr.validateAccessToken(request.Purchase.AccessToken)
+		userId, accessTokenValid := validateAccessToken(request.Purchase.AccessToken)
 		localUser, userExist := pr.checkUserExist(userId)
 		localPurchase, purchaseExist := pr.checkPurchaseExist(localUser)
-		paymentExist := pr.checkPaymentData(localPurchase)
+		paymentExist := checkPaymentData(localPurchase)
 
 		if accessTokenExist {
 			if accessTokenValid {
@@ -108,7 +103,7 @@ func (pr *purchaseRepository) VerificationPurchase(request request.PurchaseVerif
 	return pr.responseCreator.CreateResponse(response.ValidateErrorResponse{}, "")
 }
 
-func (pr *purchaseRepository) validateAccessToken(accessToken string) (string, bool) {
+func validateAccessToken(accessToken string) (string, bool) {
 	token, err := jwt.Parse(accessToken, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
@@ -161,7 +156,7 @@ func (pr *purchaseRepository) checkAccessTokenExistInSession(accessToken string)
 		log.Info("checkAccessTokenExistInSession: ", err)
 		return false
 	}
-	log.Info("exist ", exist)
+
 	return exist
 }
 
@@ -212,7 +207,7 @@ func (pr *purchaseRepository) checkPurchaseExist(user *domain.UserEntity) (*doma
 	return &localPurchase, false
 }
 
-func (pr *purchaseRepository) checkPaymentData(purchase *domain.Purchase) bool {
+func checkPaymentData(purchase *domain.Purchase) bool {
 	if purchase != nil {
 		androidPublisherService, serviceErr := androidpublisher.NewService(
 			context.Background(),

@@ -37,11 +37,10 @@ func NewRefreshRepository(
 
 func (rr *refreshRepository) Refresh(request request.RefreshTokensRequest) response.AppResponse {
 	if request.ValidateRequest(rr.validator) {
-
 		tokenValid := rr.validateToken(request.Refresh.RefreshToken)
 		localSession, sessionExist := rr.findSession(request)
-		accessToken, accessTokenCreated := rr.createAccessToken(localSession)
-		refreshToken, refreshTokenCreated := rr.createRefreshToken(localSession)
+		accessToken, accessTokenCreated := createAccessTokenFromSession(localSession)
+		refreshToken, refreshTokenCreated := createRefreshTokenFromSession(localSession)
 
 		if tokenValid {
 			if sessionExist {
@@ -82,7 +81,6 @@ func (rr *refreshRepository) findSession(request request.RefreshTokensRequest) (
 
 func (rr *refreshRepository) validateToken(refreshToken string) bool {
 	token, err := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
-
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
@@ -100,9 +98,8 @@ func (rr *refreshRepository) validateToken(refreshToken string) bool {
 	return false
 }
 
-func (rr *refreshRepository) createAccessToken(entity *domain.SessionEntity) (string, bool) {
+func createAccessTokenFromSession(entity *domain.SessionEntity) (string, bool) {
 	if entity != nil {
-
 		tokenTime := utils.GetAccessTokenTime()
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"iss":  "Moon Writer",
@@ -124,9 +121,8 @@ func (rr *refreshRepository) createAccessToken(entity *domain.SessionEntity) (st
 	}
 }
 
-func (rr *refreshRepository) createRefreshToken(entity *domain.SessionEntity) (string, bool) {
+func createRefreshTokenFromSession(entity *domain.SessionEntity) (string, bool) {
 	if entity != nil {
-
 		tokenTime := utils.GetRefreshTokenTime()
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"iss":  "Moon Writer",
@@ -151,6 +147,7 @@ func (rr *refreshRepository) refreshSession(access string, refresh string, entit
 	updateExec := "UPDATE sessions SET (access_token, refresh_token, last_visit) = ($1, $2, $3) " +
 		"WHERE session_id=$4 AND refresh_token=$5 AND mobile_key=$6"
 	_, err := rr.db.Exec(updateExec, access, refresh, time.Now(), entity.Id, entity.RefreshToken, entity.MobileKey)
+
 	if err != nil {
 		return false
 	}
@@ -158,7 +155,10 @@ func (rr *refreshRepository) refreshSession(access string, refresh string, entit
 	return true
 }
 
-func (rr *refreshRepository) createRefreshTokenResponse(entity *domain.SessionEntity, access string, refresh string) response.AppResponse {
+func (rr *refreshRepository) createRefreshTokenResponse(
+	entity *domain.SessionEntity,
+	access string,
+	refresh string) response.AppResponse {
 	return rr.responseCreator.CreateResponse(response.TokenResponse{
 		Message:      fmt.Sprintf("Tokens refreshed for [%s]", entity.UserName),
 		SessionId:    0,

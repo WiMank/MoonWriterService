@@ -29,14 +29,12 @@ func NewAuthRepository(db *sqlx.DB, responseCreator response.AppResponseCreator,
 
 func (ar *authRepository) AuthenticateUser(authReq request.AuthenticateUserRequest) response.AppResponse {
 	if authReq.ValidateRequest(ar.validator) {
-
 		go ar.checkSessionsCount(authReq)
-
 		localUserEntity, userExist := ar.findUserEntity(authReq)
 		passwordAndNameCorrect := localUserEntity.CheckUserNameAndPass(authReq.User)
 		sessionExist := ar.checkSessionExist(authReq.MobileKey)
-		accessToken, accessTokenCreated := ar.createAccessToken(localUserEntity)
-		refreshToken, refreshTokenCreated := ar.createRefreshToken(localUserEntity)
+		accessToken, accessTokenCreated := createAccessToken(localUserEntity)
+		refreshToken, refreshTokenCreated := createRefreshToken(localUserEntity)
 
 		if userExist {
 			if passwordAndNameCorrect {
@@ -118,9 +116,8 @@ func (ar *authRepository) clearSessions(userName string) {
 	}
 }
 
-func (ar *authRepository) createAccessToken(entity *domain.UserEntity) (string, bool) {
+func createAccessToken(entity *domain.UserEntity) (string, bool) {
 	if entity != nil {
-
 		tokenTime := utils.GetAccessTokenTime()
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"iss":  "Moon Writer",
@@ -128,6 +125,7 @@ func (ar *authRepository) createAccessToken(entity *domain.UserEntity) (string, 
 			"role": entity.UserRole,
 			"exp":  tokenTime,
 		})
+
 		tokenString, err := token.SignedString([]byte(config.SecretKey))
 
 		if err != nil {
@@ -141,15 +139,15 @@ func (ar *authRepository) createAccessToken(entity *domain.UserEntity) (string, 
 	}
 }
 
-func (ar *authRepository) createRefreshToken(entity *domain.UserEntity) (string, bool) {
+func createRefreshToken(entity *domain.UserEntity) (string, bool) {
 	if entity != nil {
-
 		tokenTime := utils.GetRefreshTokenTime()
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"iss":  "Moon Writer",
 			"user": entity.UserName,
 			"exp":  tokenTime,
 		})
+
 		tokenString, err := token.SignedString([]byte(config.SecretKey))
 
 		if err != nil {
