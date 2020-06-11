@@ -100,7 +100,6 @@ func (ar *authRepository) checkSessionsCount(authReq request.AuthenticateUserReq
 	if count > 5 {
 		ar.clearSessions(authReq.User.UserName)
 	}
-
 }
 
 func (ar *authRepository) clearSessions(userName string) {
