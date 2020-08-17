@@ -1,7 +1,7 @@
 database:
   user: postgres
-  password: korabl
-  dbname: moon_writer
+  password: test
+  dbname: test
   addr: 127.0.0.1:5432
   host: localhost
   port: 5432

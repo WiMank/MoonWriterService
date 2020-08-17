@@ -211,7 +211,7 @@ func checkPaymentData(purchase *domain.Purchase) bool {
 	if purchase != nil {
 		androidPublisherService, serviceErr := androidpublisher.NewService(
 			context.Background(),
-			option.WithCredentialsFile("E:\\Dev\\GoDev\\MoonWriterService\\credentials.json"),
+			option.WithCredentialsFile("credentials.json"),
 		)
 
 		if serviceErr != nil {
