@@ -42,27 +42,27 @@ func (rr *refreshRepository) Refresh(request request.RefreshTokensRequest) respo
 		accessToken, accessTokenCreated := createAccessTokenFromSession(localSession)
 		refreshToken, refreshTokenCreated := createRefreshTokenFromSession(localSession)
 
-		if tokenValid {
-			if sessionExist {
-				if accessTokenCreated && refreshTokenCreated {
-					isRefreshed := rr.refreshSession(accessToken, refreshToken, localSession)
-					if isRefreshed {
-						return rr.createRefreshTokenResponse(localSession, accessToken, refreshToken)
-					} else {
-						return rr.responseCreator.CreateResponse(response.RefreshSessionErrorResponse{}, localSession.UserName)
-					}
-				} else {
-					rr.responseCreator.CreateResponse(response.TokenErrorResponse{}, localSession.UserName)
-				}
-			} else {
-				return rr.responseCreator.CreateResponse(response.InvalidSession{}, cast.ToString(request.Refresh.SessionId))
-			}
+		if !tokenValid {
+			return rr.responseCreator.CreateResponse(response.InvalidToken{}, config.EmptyString)
+		}
+
+		if !sessionExist {
+			return rr.responseCreator.CreateResponse(response.InvalidSession{}, cast.ToString(request.Refresh.SessionId))
+		}
+
+		if !accessTokenCreated || !refreshTokenCreated {
+			return rr.responseCreator.CreateResponse(response.TokenErrorResponse{}, localSession.UserName)
+		}
+
+		isRefreshed := rr.refreshSession(accessToken, refreshToken, localSession)
+		if isRefreshed {
+			return rr.createRefreshTokenResponse(localSession, accessToken, refreshToken)
 		} else {
-			return rr.responseCreator.CreateResponse(response.InvalidToken{}, "")
+			return rr.responseCreator.CreateResponse(response.RefreshSessionErrorResponse{}, localSession.UserName)
 		}
 	}
 
-	return rr.responseCreator.CreateResponse(response.ValidateErrorResponse{}, "")
+	return rr.responseCreator.CreateResponse(response.ValidateErrorResponse{}, config.EmptyString)
 }
 
 func (rr *refreshRepository) findSession(request request.RefreshTokensRequest) (*domain.SessionEntity, bool) {
@@ -111,13 +111,13 @@ func createAccessTokenFromSession(entity *domain.SessionEntity) (string, bool) {
 		tokenString, err := token.SignedString([]byte(config.SecretKey))
 
 		if err != nil {
-			return "", false
+			return config.EmptyString, false
 		}
 
 		return tokenString, true
 
 	} else {
-		return "", false
+		return config.EmptyString, false
 	}
 }
 
@@ -133,13 +133,13 @@ func createRefreshTokenFromSession(entity *domain.SessionEntity) (string, bool) 
 		tokenString, err := token.SignedString([]byte(config.SecretKey))
 
 		if err != nil {
-			return "", false
+			return config.EmptyString, false
 		}
 
 		return tokenString, true
 
 	} else {
-		return "", false
+		return config.EmptyString, false
 	}
 }
 
@@ -164,5 +164,5 @@ func (rr *refreshRepository) createRefreshTokenResponse(
 		SessionId:    0,
 		AccessToken:  access,
 		RefreshToken: refresh,
-	}, "")
+	}, config.EmptyString)
 }

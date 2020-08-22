@@ -1,6 +1,6 @@
 package domain
 
-type Purchase struct {
+type PurchaseEntity struct {
 	UserId        string `bson:"user_id"`
 	IsPremiumUser bool   `bson:"is_premium_user"`
 	PurchaseToken string `bson:"purchase_token"`

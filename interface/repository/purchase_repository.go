@@ -43,30 +43,31 @@ func (pr *purchaseRepository) RegisterPurchase(request request.PurchaseRegisterR
 		userId, accessTokenValid := validateAccessToken(request.Purchase.AccessToken)
 		localUser, userExist := pr.checkUserExist(userId)
 
-		if accessTokenExist {
-			if accessTokenValid {
-				if (userExist) && (!localUser.IsPremiumUser) {
-					if pr.checkPurchaseTokenNonExist(request.Purchase.PurchaseToken) {
-						if pr.insertPurchase(userId, request) {
-							return pr.responseCreator.CreateResponse(response.RegisterPurchaseResponse{}, userId)
-						} else {
-							return pr.responseCreator.CreateResponse(response.InsertPurchaseErrorResponse{}, userId)
-						}
-					} else {
-						return pr.responseCreator.CreateResponse(response.PurchaseTokenExistResponse{}, userId)
-					}
-				} else {
-					return pr.responseCreator.CreateResponse(response.PurchaseUserExistResponse{}, userId)
-				}
-			} else {
-				return pr.responseCreator.CreateResponse(response.InvalidToken{}, userId)
-			}
-		} else {
+		if !accessTokenExist {
 			return pr.responseCreator.CreateResponse(response.InvalidToken{}, userId)
 		}
+
+		if !accessTokenValid {
+			return pr.responseCreator.CreateResponse(response.InvalidToken{}, userId)
+		}
+
+		if (!userExist) || (localUser.IsPremiumUser) {
+			return pr.responseCreator.CreateResponse(response.PurchaseUserExistResponse{}, userId)
+		}
+
+		if pr.checkPurchaseTokenNonExist(request.Purchase.PurchaseToken) {
+			if pr.insertPurchase(userId, request) {
+				return pr.responseCreator.CreateResponse(response.RegisterPurchaseResponse{}, userId)
+			} else {
+				return pr.responseCreator.CreateResponse(response.InsertPurchaseErrorResponse{}, userId)
+			}
+		} else {
+			return pr.responseCreator.CreateResponse(response.PurchaseTokenExistResponse{}, userId)
+		}
+
 	}
 
-	return pr.responseCreator.CreateResponse(response.ValidateErrorResponse{}, "")
+	return pr.responseCreator.CreateResponse(response.ValidateErrorResponse{}, config.EmptyString)
 }
 
 func (pr *purchaseRepository) VerificationPurchase(request request.PurchaseVerificationRequest) response.AppResponse {
@@ -77,50 +78,49 @@ func (pr *purchaseRepository) VerificationPurchase(request request.PurchaseVerif
 		localPurchase, purchaseExist := pr.checkPurchaseExist(localUser)
 		paymentExist := checkPaymentData(localPurchase)
 
-		if accessTokenExist {
-			if accessTokenValid {
-				if userExist {
-					if purchaseExist {
-						if paymentExist {
-							return pr.responseCreator.CreateResponse(response.PurchaseValidResponse{}, userId)
-						} else {
-							return pr.responseCreator.CreateResponse(response.CheckPaymentDataErrorResponse{}, userId)
-						}
-					} else {
-						return pr.responseCreator.CreateResponse(response.PurchaseNotFoundResponse{}, userId)
-					}
-				} else {
-					return pr.responseCreator.CreateResponse(response.PurchaseUserExistResponse{}, userId)
-				}
-			} else {
-				return pr.responseCreator.CreateResponse(response.InvalidToken{}, userId)
-			}
-		} else {
+		if !accessTokenExist {
 			return pr.responseCreator.CreateResponse(response.InvalidToken{}, userId)
 		}
-	}
 
-	return pr.responseCreator.CreateResponse(response.ValidateErrorResponse{}, "")
+		if !accessTokenValid {
+			return pr.responseCreator.CreateResponse(response.InvalidToken{}, userId)
+		}
+
+		if !userExist {
+			return pr.responseCreator.CreateResponse(response.PurchaseUserExistResponse{}, userId)
+		}
+
+		if !purchaseExist {
+			return pr.responseCreator.CreateResponse(response.PurchaseNotFoundResponse{}, userId)
+		}
+
+		if paymentExist {
+			return pr.responseCreator.CreateResponse(response.PurchaseValidResponse{}, userId)
+		} else {
+			return pr.responseCreator.CreateResponse(response.CheckPaymentDataErrorResponse{}, userId)
+		}
+	}
+	return pr.responseCreator.CreateResponse(response.ValidateErrorResponse{}, config.EmptyString)
 }
 
 func validateAccessToken(accessToken string) (string, bool) {
 	token, err := jwt.Parse(accessToken, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return []byte(config.SecretKey), nil
 	})
 
 	if err != nil {
 		fmt.Println(err)
-		return "", false
+		return config.EmptyString, false
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		return cast.ToString(claims["user"]), true
 	}
 
-	return "", false
+	return config.EmptyString, false
 }
 
 func (pr *purchaseRepository) checkUserExist(userName string) (*domain.UserEntity, bool) {
@@ -195,8 +195,8 @@ func (pr *purchaseRepository) insertPurchase(userName string, request request.Pu
 	return true
 }
 
-func (pr *purchaseRepository) checkPurchaseExist(user *domain.UserEntity) (*domain.Purchase, bool) {
-	var localPurchase domain.Purchase
+func (pr *purchaseRepository) checkPurchaseExist(user *domain.UserEntity) (*domain.PurchaseEntity, bool) {
+	var localPurchase domain.PurchaseEntity
 	checkPurchaseExist := "SELECT user_name FROM purchases WHERE user_name=$1"
 	err := pr.db.QueryRowx(checkPurchaseExist, user.UserName).StructScan(&localPurchase)
 
@@ -207,7 +207,7 @@ func (pr *purchaseRepository) checkPurchaseExist(user *domain.UserEntity) (*doma
 	return &localPurchase, false
 }
 
-func checkPaymentData(purchase *domain.Purchase) bool {
+func checkPaymentData(purchase *domain.PurchaseEntity) bool {
 	if purchase != nil {
 		androidPublisherService, serviceErr := androidpublisher.NewService(
 			context.Background(),
